@@ -1,0 +1,59 @@
+/* Custom styles to complement Tailwind */
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+.gauge {
+  margin: 0 auto;
+}
+
+#sensorChart {
+  max-height: 400px;
+}
+
+#rfid-timeline .timeline-item {
+  padding: 12px;
+  border-left: 4px solid #3b82f6;
+  background: #f8fafc;
+  border-radius: 6px;
+  transition: background 0.3s, transform 0.2s;
+  cursor: pointer;
+}
+
+#rfid-timeline .timeline-item:hover {
+  background: #e0f2fe;
+  transform: translateX(4px);
+}
+
+#rfid-timeline .timeline-item.dark {
+  background: #1f2937;
+}
+
+#rfid-timeline .timeline-item.dark:hover {
+  background: #3b82f6;
+}
+
+.group:hover .tooltip {
+  display: block;
+}
+
+.tooltip {
+  z-index: 10;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

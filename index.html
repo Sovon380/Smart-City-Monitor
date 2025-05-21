@@ -1,0 +1,177 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart City Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.4.0/justgage.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-inter transition-colors duration-300">
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white dark:bg-gray-800 shadow-lg fixed h-full">
+      <div class="p-4">
+        <div class="flex items-center mb-6">
+          <img src="https://via.placeholder.com/40" alt="Logo" class="w-10 h-10 mr-2">
+          <h1 class="text-xl font-bold">Smart City Monitor</h1>
+        </div>
+        <nav>
+          <ul>
+            <li><a href="#dashboard" class="block py-2 px-4 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">Dashboard</a></li>
+            <li><a href="#trends" class="block py-2 px-4 text-gray-600 dark:text-gray-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">Trends</a></li>
+            <li><a href="#rfid" class="block py-2 px-4 text-gray-600 dark:text-gray-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">RFID Timeline</a></li>
+          </ul>
+        </nav>
+        <div class="absolute bottom-4 left-4">
+          <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64 p-6 flex-1">
+      <div class="max-w-6xl mx-auto">
+        <!-- Status and Controls -->
+        <section id="dashboard" class="mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold">Dashboard</h2>
+            <button id="refresh-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
+            <h3 class="text-lg font-medium">Status: <span id="status" class="font-bold">Loading...</span></h3>
+          </div>
+
+          <!-- Sensor Gauges -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
+              <h3 class="text-md font-medium mb-2">Temperature (°C)</h3>
+              <div id="temp-gauge" class="w-full h-32"></div>
+              <p class="text-center mt-2" id="temp-value">Loading...</p>
+              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
+                Current temperature in °C
+              </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
+              <h3 class="text-md font-medium mb-2">Humidity (%)</h3>
+              <div id="humidity-gauge" class="w-full h-32"></div>
+              <p class="text-center mt-2" id="humidity-value">Loading...</p>
+              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
+                Relative humidity percentage
+              </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
+              <h3 class="text-md font-medium mb-2">Gas Level</h3>
+              <div id="gas-gauge" class="w-full h-32"></div>
+              <p class="text-center mt-2" id="gas-value">Loading...</p>
+              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
+                Gas sensor reading (0-4095)
+              </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
+              <h3 class="text-md font-medium mb-2">Crowd Distance (cm)</h3>
+              <div id="distance-gauge" class="w-full h-32"></div>
+              <p class="text-center mt-2" id="distance-value">Loading...</p>
+              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
+                Distance to nearest obstacle
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sensor Trends -->
+        <section id="trends" class="mb-8">
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <button id="trends-toggle" class="w-full text-left text-lg font-medium mb-2 flex justify-between items-center">
+              📊 Sensor Trends
+              <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div id="trends-content" class="hidden">
+              <canvas id="sensorChart" class="mt-4 h-96"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- RFID Timeline -->
+        <section id="rfid">
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <button id="rfid-toggle" class="w-full text-left text-lg font-medium mb-2 flex justify-between items-center">
+              🕒 RFID Scan Timeline
+              <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div id="rfid-content" class="hidden">
+              <div id="rfid-timeline" class="space-y-4"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Alert Modal -->
+        <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 class="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">⚠️ Critical Alert</h3>
+            <p id="alert-message" class="mb-4"></p>
+            <button id="alert-close" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded w-full">Acknowledge</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
