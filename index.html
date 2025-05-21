@@ -56,7 +56,7 @@
     <aside class="w-64 bg-white dark:bg-gray-800 shadow-lg fixed h-full">
       <div class="p-4">
         <div class="flex items-center mb-6">
-          <img src="https://via.placeholder.com/40" alt="Logo" class="w-10 h-10 mr-2">
+          <img src="logo.jpg" alt="Smart City Monitor Logo" class="w-10 h-10 mr-2">
           <h1 class="text-xl font-bold">Smart City Monitor</h1>
         </div>
         <nav>
@@ -141,7 +141,14 @@
               </svg>
             </button>
             <div id="trends-content" class="hidden">
-              <canvas id="sensorChart" class="mt-4 h-96"></canvas>
+              <div id="trends-loading" class="text-center py-4 text-gray-500 dark:text-gray-400">
+                <svg class="w-6 h-6 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Loading trends...
+              </div>
+              <canvas id="sensorChart" class="mt-4"></canvas>
+              <p id="trends-error" class="hidden text-center py-4 text-red-500">Error loading trends. Please try again.</p>
             </div>
           </div>
         </section>

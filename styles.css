@@ -9,6 +9,7 @@
 
 #sensorChart {
   max-height: 400px;
+  width: 100%;
 }
 
 #rfid-timeline .timeline-item {

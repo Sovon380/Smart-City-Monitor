@@ -1,6 +1,6 @@
 // ThingSpeak configuration
 const channelID = '2936641';
-const readAPIKey = '98ZPQ930QYNNI2A9'; // Replace with your ThingSpeak Read API Key
+const readAPIKey = '98ZPQ930QYNNI2A9'; 
 const latestFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=1`;
 const trendFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=20`;
 const rfidFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=5`;
@@ -14,6 +14,8 @@ const distanceValue = document.getElementById('distance-value');
 const refreshBtn = document.getElementById('refresh-btn');
 const trendsToggle = document.getElementById('trends-toggle');
 const trendsContent = document.getElementById('trends-content');
+const trendsLoading = document.getElementById('trends-loading');
+const trendsError = document.getElementById('trends-error');
 const rfidToggle = document.getElementById('rfid-toggle');
 const rfidContent = document.getElementById('rfid-content');
 const rfidTimeline = document.getElementById('rfid-timeline');
@@ -21,6 +23,37 @@ const alertModal = document.getElementById('alert-modal');
 const alertMessage = document.getElementById('alert-message');
 const alertClose = document.getElementById('alert-close');
 const themeToggle = document.getElementById('theme-toggle');
+
+// Chart setup
+let sensorChart;
+function initChart() {
+  const ctx = document.getElementById('sensorChart').getContext('2d');
+  if (sensorChart) sensorChart.destroy(); // Destroy existing chart to prevent duplication
+  sensorChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Temperature (°C)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Humidity (%)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Gas Level', data: [], borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Distance (cm)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'Value' } },
+        x: { title: { display: true, text: 'Time' } }
+      },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12, family: 'Inter' } } },
+        tooltip: { backgroundColor: '#1f2937', titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } }
+      }
+    }
+  });
+}
 
 // Gauges
 let tempGauge, humidityGauge, gasGauge, distanceGauge;
@@ -69,33 +102,6 @@ function initGauges() {
   });
 }
 
-// Chart setup
-const ctx = document.getElementById('sensorChart').getContext('2d');
-const sensorChart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [
-      { label: 'Temperature (°C)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.3 },
-      { label: 'Humidity (%)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-      { label: 'Gas Level', data: [], borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 },
-      { label: 'Distance (cm)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.3 }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: 'Value' } },
-      x: { title: { display: true, text: 'Time' } }
-    },
-    plugins: {
-      legend: { position: 'top', labels: { font: { size: 12, family: 'Inter' } } },
-      tooltip: { backgroundColor: '#1f2937', titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } }
-    }
-  }
-});
-
 // Theme toggle
 themeToggle.addEventListener('click', () => {
   document.body.classList.toggle('dark');
@@ -111,11 +117,20 @@ if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') 
 trendsToggle.addEventListener('click', () => {
   trendsContent.classList.toggle('hidden');
   trendsToggle.querySelector('svg').classList.toggle('rotate-180');
+  if (!trendsContent.classList.contains('hidden')) {
+    trendsLoading.classList.remove('hidden');
+    trendsError.classList.add('hidden');
+    initChart(); // Reinitialize chart when opened
+    fetchTrendData();
+  }
 });
 
 rfidToggle.addEventListener('click', () => {
   rfidContent.classList.toggle('hidden');
   rfidToggle.querySelector('svg').classList.toggle('rotate-180');
+  if (!rfidContent.classList.contains('hidden')) {
+    fetchRFIDTimeline();
+  }
 });
 
 // Alert modal
@@ -130,10 +145,16 @@ async function fetchData(url, cacheKey) {
     const { data, timestamp } = JSON.parse(cached);
     if (Date.now() - timestamp < 30000) return data;
   }
-  const response = await fetch(url);
-  const data = await response.json();
-  localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
-  return data;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+    return data;
+  } catch (error) {
+    console.error(`Error fetching ${cacheKey}:`, error);
+    return null;
+  }
 }
 
 // Fetch latest data
@@ -142,10 +163,13 @@ async function fetchLatestData() {
     statusElement.textContent = 'Loading...';
     statusElement.className = 'font-bold text-gray-500';
     const data = await fetchData(latestFeedURL, 'latestData');
-    const feed = data.feeds[0];
-    if (!feed) return;
+    if (!data || !data.feeds[0]) {
+      statusElement.textContent = 'No data available';
+      statusElement.className = 'font-bold text-yellow-500';
+      return;
+    }
 
-    // Update gauges and values
+    const feed = data.feeds[0];
     const temp = parseFloat(feed.field1) || 0;
     const humidity = parseFloat(feed.field2) || 0;
     const gas = parseInt(feed.field3) || 0;
@@ -159,7 +183,6 @@ async function fetchLatestData() {
     gasValue.textContent = gas;
     distanceValue.textContent = distance;
 
-    // Update status
     let status = '✅ All Safe';
     let statusColor = 'text-green-500';
     let alertMsg = '';
@@ -185,7 +208,19 @@ async function fetchLatestData() {
 // Fetch trend data
 async function fetchTrendData() {
   try {
+    trendsLoading.classList.remove('hidden');
+    trendsError.classList.add('hidden');
     const data = await fetchData(trendFeedURL, 'trendData');
+    trendsLoading.classList.add('hidden');
+
+    if (!data || !data.feeds || data.feeds.length === 0) {
+      trendsError.classList.remove('hidden');
+      sensorChart.data.labels = [];
+      sensorChart.data.datasets.forEach(dataset => dataset.data = []);
+      sensorChart.update();
+      return;
+    }
+
     const feeds = data.feeds;
     const labels = feeds.map(feed => new Date(feed.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     const tempData = feeds.map(feed => parseFloat(feed.field1) || 0);
@@ -201,6 +236,8 @@ async function fetchTrendData() {
     sensorChart.update();
   } catch (error) {
     console.error('Error fetching trend data:', error);
+    trendsLoading.classList.add('hidden');
+    trendsError.classList.remove('hidden');
   }
 }
 
@@ -208,8 +245,13 @@ async function fetchTrendData() {
 async function fetchRFIDTimeline() {
   try {
     const data = await fetchData(rfidFeedURL, 'rfidData');
-    const feeds = data.feeds.reverse();
     rfidTimeline.innerHTML = '';
+    if (!data || !data.feeds) {
+      rfidTimeline.innerHTML = '<p class="text-red-500">No RFID data available</p>';
+      return;
+    }
+
+    const feeds = data.feeds.reverse();
     feeds.forEach(feed => {
       if (feed.field5 || feed.field6 || feed.field7) {
         const item = document.createElement('div');
@@ -242,8 +284,6 @@ refreshBtn.addEventListener('click', () => {
 // Initial setup
 initGauges();
 fetchLatestData();
-fetchTrendData();
 fetchRFIDTimeline();
 setInterval(fetchLatestData, 30000);
-setInterval(fetchTrendData, 60000);
 setInterval(fetchRFIDTimeline, 60000);
