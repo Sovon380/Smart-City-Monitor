@@ -1,289 +1,304 @@
-// ThingSpeak configuration
-const channelID = '2936641';
-const readAPIKey = '98ZPQ930QYNNI2A9';
-const latestFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=1`;
-const trendFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=20`;
-const rfidFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=5`;
+const THINGSPEAK_URL = 'https://api.thingspeak.com/channels/2936641/feeds.json?results=1';
+const HEALTH_TIPS = [
+    "Stay hydrated, drink water regularly.",
+    "Wear light clothing in hot conditions.",
+    "Take breaks in shaded areas.",
+    "Monitor for signs of heat stress.",
+    "Ensure proper ventilation in workspace."
+];
 
-// DOM elements
-const statusElement = document.getElementById('status');
-const tempValue = document.getElementById('temp-value');
-const humidityValue = document.getElementById('humidity-value');
-const gasValue = document.getElementById('gas-value');
-const distanceValue = document.getElementById('distance-value');
-const refreshBtn = document.getElementById('refresh-btn');
-const trendsToggle = document.getElementById('trends-toggle');
-const trendsContent = document.getElementById('trends-content');
-const trendsLoading = document.getElementById('trends-loading');
-const trendsError = document.getElementById('trends-error');
-const rfidToggle = document.getElementById('rfid-toggle');
-const rfidContent = document.getElementById('rfid-content');
-const rfidTimeline = document.getElementById('rfid-timeline');
-const alertModal = document.getElementById('alert-modal');
-const alertMessage = document.getElementById('alert-message');
-const alertClose = document.getElementById('alert-close');
-const themeToggle = document.getElementById('theme-toggle');
-
-// Chart setup
-let sensorChart;
-function initChart() {
-  const ctx = document.getElementById('sensorChart').getContext('2d');
-  if (sensorChart) sensorChart.destroy(); // Destroy existing chart to prevent duplication
-  sensorChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        { label: 'Temperature (°C)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.3 },
-        { label: 'Humidity (%)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-        { label: 'Gas Level', data: [], borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', fill: true, tension: 0.3 },
-        { label: 'Distance (cm)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.3 }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: { beginAtZero: true, title: { display: true, text: 'Value' } },
-        x: { title: { display: true, text: 'Time' } }
-      },
-      plugins: {
-        legend: { position: 'top', labels: { font: { size: 12, family: 'Inter' } } },
-        tooltip: { backgroundColor: '#1f2937', titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' } }
-      }
-    }
-  });
-}
+let sensorData = {
+    temp: [], hum: [], realfeel: [], gas: [], crowd: [],
+    timestamps: [], maxLength: 50
+};
+let currentTipIndex = 0;
+let riskProfiles = [
+    { uid: "A1B2C3D4", name: "Alice (Engineer)", tempThreshold: 32.0, gasThreshold: 3000, buzzer: true },
+    { uid: "E5F6G7H8", name: "Bob (Supervisor)", tempThreshold: 35.0, gasThreshold: 2500, buzzer: true },
+    { uid: "I9J0K1L2", name: "Charlie (Engineer)", tempThreshold: 33.0, gasThreshold: 2800, buzzer: true },
+    { uid: "M3N4O5P6", name: "Diana (Visitor)", tempThreshold: 37.0, gasThreshold: 3500, buzzer: false },
+    { uid: "Q7R8S9T0", name: "Eve (Supervisor)", tempThreshold: 35.0, gasThreshold: 2700, buzzer: true }
+];
+let currentProfile = { uid: "", name: "Default", tempThreshold: 35.0, gasThreshold: 3000, buzzer: true };
+let workerInfo = { age: 0, workingLevel: "Low" };
 
 // Gauges
-let tempGauge, humidityGauge, gasGauge, distanceGauge;
-function initGauges() {
-  tempGauge = new JustGage({
-    id: 'temp-gauge',
-    value: 0,
-    min: 0,
-    max: 50,
-    title: '',
-    label: '°C',
-    gaugeWidthScale: 0.6,
-    levelColors: ['#22c55e', '#f97316', '#ef4444'],
-    decimals: 1
-  });
-  humidityGauge = new JustGage({
-    id: 'humidity-gauge',
-    value: 0,
-    min: 0,
-    max: 100,
-    title: '',
-    label: '%',
-    gaugeWidthScale: 0.6,
-    levelColors: ['#22c55e', '#f97316', '#ef4444'],
-    decimals: 1
-  });
-  gasGauge = new JustGage({
-    id: 'gas-gauge',
-    value: 0,
-    min: 0,
-    max: 4095,
-    title: '',
-    label: '',
-    gaugeWidthScale: 0.6,
-    levelColors: ['#22c55e', '#f97316', '#ef4444']
-  });
-  distanceGauge = new JustGage({
-    id: 'distance-gauge',
-    value: 0,
-    min: 0,
-    max: 200,
-    title: '',
-    label: 'cm',
-    gaugeWidthScale: 0.6,
-    levelColors: ['#22c55e', '#f97316', '#ef4444']
-  });
-}
+let gauges = {
+    temp: new JustGage({
+        id: "temp-gauge", value: 0, min: 0, max: 50, title: "Temperature",
+        label: "°C", gaugeWidthScale: 0.6, levelColors: ["#4CAF50", "#FFC107", "#F44336"]
+    }),
+    hum: new JustGage({
+        id: "hum-gauge", value: 70, min: 70, max: 85, title: "Humidity",
+        label: "%", gaugeWidthScale: 0.6, levelColors: ["#4CAF50", "#FFC107", "#F44336"]
+    }),
+    realfeel: new JustGage({
+        id: "realfeel-gauge", value: 0, min: 0, max: 60, title: "Real Feel",
+        label: "°C", gaugeWidthScale: 0.6, levelColors: ["#4CAF50", "#FFC107", "#F44336"]
+    }),
+    gas: new JustGage({
+        id: "gas-gauge", value: 0, min: 0, max: 4095, title: "Gas Level",
+        label: "", gaugeWidthScale: 0.6, levelColors: ["#4CAF50", "#FFC107", "#F44336"]
+    }),
+    crowd: new JustGage({
+        id: "crowd-gauge", value: 0, min: 0, max: 200, title: "Crowd Distance",
+        label: "cm", gaugeWidthScale: 0.6, levelColors: ["#4CAF50", "#FFC107", "#F44336"]
+    })
+};
 
-// Theme toggle
-themeToggle.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-  localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-});
-
-// Load theme preference
-if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-  document.body.classList.add('dark');
-}
-
-// Toggle sections
-trendsToggle.addEventListener('click', () => {
-  trendsContent.classList.toggle('hidden');
-  trendsToggle.querySelector('svg').classList.toggle('rotate-180');
-  if (!trendsContent.classList.contains('hidden')) {
-    trendsLoading.classList.remove('hidden');
-    trendsError.classList.add('hidden');
-    initChart(); // Reinitialize chart when opened
-    fetchTrendData();
-  }
-});
-
-rfidToggle.addEventListener('click', () => {
-  rfidContent.classList.toggle('hidden');
-  rfidToggle.querySelector('svg').classList.toggle('rotate-180');
-  if (!rfidContent.classList.contains('hidden')) {
-    fetchRFIDTimeline();
-  }
-});
-
-// Alert modal
-alertClose.addEventListener('click', () => {
-  alertModal.classList.add('hidden');
-});
-
-// Fetch and cache data
-async function fetchData(url, cacheKey) {
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    const { data, timestamp } = JSON.parse(cached);
-    if (Date.now() - timestamp < 30000) return data;
-  }
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
-    return data;
-  } catch (error) {
-    console.error(`Error fetching ${cacheKey}:`, error);
-    return null;
-  }
-}
-
-// Fetch latest data
-async function fetchLatestData() {
-  try {
-    statusElement.textContent = 'Loading...';
-    statusElement.className = 'font-bold text-gray-500';
-    const data = await fetchData(latestFeedURL, 'latestData');
-    if (!data || !data.feeds[0]) {
-      statusElement.textContent = 'No data available';
-      statusElement.className = 'font-bold text-yellow-500';
-      return;
+// Chart
+let ctx = document.getElementById('sensor-chart').getContext('2d');
+let sensorChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [
+            { label: 'Temperature (°C)', data: [], borderColor: '#FF6384', fill: false },
+            { label: 'Humidity (%)', data: [], borderColor: '#36A2EB', fill: false },
+            { label: 'Real Feel (°C)', data: [], borderColor: '#FFCE56', fill: false },
+            { label: 'Gas Level', data: [], borderColor: '#4BC0C0', fill: false },
+            { label: 'Crowd Distance (cm)', data: [], borderColor: '#9966FF', fill: false }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: { x: { title: { display: true, text: 'Time' } } },
+        plugins: { zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } } }
     }
+});
 
-    const feed = data.feeds[0];
-    const temp = parseFloat(feed.field1) || 0;
-    const humidity = parseFloat(feed.field2) || 0;
-    const gas = parseInt(feed.field3) || 0;
-    const distance = parseInt(feed.field4) || 0;
-    tempGauge.refresh(temp);
-    humidityGauge.refresh(humidity);
-    gasGauge.refresh(gas);
-    distanceGauge.refresh(distance);
-    tempValue.textContent = temp.toFixed(1);
-    humidityValue.textContent = humidity.toFixed(1);
-    gasValue.textContent = gas;
-    distanceValue.textContent = distance;
+// Theme Toggle
+document.getElementById('theme-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+});
 
-    let status = '✅ All Safe';
-    let statusColor = 'text-green-500';
-    let alertMsg = '';
-    if (temp > 35 || humidity < 20 || humidity > 80 || gas > 3000 || distance < 20) {
-      status = '⚠️ Critical Alert!';
-      statusColor = 'text-red-500';
-      alertMsg = `Critical condition detected: ${temp > 35 ? 'High Temp! ' : ''}${humidity < 20 || humidity > 80 ? 'Extreme Humidity! ' : ''}${gas > 3000 ? 'High Gas! ' : ''}${distance < 20 ? 'Crowd Overload! ' : ''}`;
-      alertModal.classList.remove('hidden');
-      alertMessage.textContent = alertMsg;
-    } else if (temp > 30 || humidity < 30 || humidity > 70 || gas > 2000 || distance < 50) {
-      status = '⚠️ Warning!';
-      statusColor = 'text-orange-500';
-    }
-    statusElement.textContent = status;
-    statusElement.className = `font-bold ${statusColor} animate-fadeIn`;
-  } catch (error) {
-    console.error('Error fetching latest data:', error);
-    statusElement.textContent = 'Error fetching data';
-    statusElement.className = 'font-bold text-red-500';
-  }
+// Initialize Theme
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
 }
 
-// Fetch trend data
-async function fetchTrendData() {
-  try {
-    trendsLoading.classList.remove('hidden');
-    trendsError.classList.add('hidden');
-    const data = await fetchData(trendFeedURL, 'trendData');
-    trendsLoading.classList.add('hidden');
+// Fetch Data
+async function fetchData() {
+    try {
+        let response = await fetch(THINGSPEAK_URL);
+        let data = await response.json();
+        let feed = data.feeds[0];
+        
+        let readings = {
+            temp: parseFloat(feed.field1) || 0,
+            hum: parseFloat(feed.field2) || 70,
+            gas: parseInt(feed.field3) || 0,
+            crowd: parseInt(feed.field4) || 0,
+            uid: feed.field5 || "N/A",
+            name: feed.field6 || "N/A",
+            role: feed.field7 || "N/A",
+            realfeel: parseFloat(feed.field8) || 0
+        };
 
-    if (!data || !data.feeds || data.feeds.length === 0) {
-      trendsError.classList.remove('hidden');
-      sensorChart.data.labels = [];
-      sensorChart.data.datasets.forEach(dataset => dataset.data = []);
-      sensorChart.update();
-      return;
+        // Simulate Age and Working Level (not in ThingSpeak; assume from Arduino)
+        workerInfo.age = readings.name !== "N/A" ? (readings.name.includes("Alice") ? 30 : readings.name.includes("Bob") ? 45 : 55) : 0;
+        workerInfo.workingLevel = readings.name !== "N/A" ? (readings.name.includes("Alice") ? "High" : readings.name.includes("Bob") ? "Medium" : "Low") : "Low";
+
+        updateWorkerInfo(readings);
+        updateSensorReadings(readings);
+        updateSensorChart(readings);
+        updateWarnings(readings);
+        updateHealthTips(readings);
+        showToast(`Updated data for ${readings.name}`);
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        showToast('Failed to fetch data', true);
     }
+}
 
-    const feeds = data.feeds;
-    const labels = feeds.map(feed => new Date(feed.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    const tempData = feeds.map(feed => parseFloat(feed.field1) || 0);
-    const humidityData = feeds.map(feed => parseFloat(feed.field2) || 0);
-    const gasData = feeds.map(feed => parseInt(feed.field3) || 0);
-    const distanceData = feeds.map(feed => parseInt(feed.field4) || 0);
+// Update Worker Info
+function updateWorkerInfo(readings) {
+    document.getElementById('uid').textContent = readings.uid;
+    document.getElementById('worker-name').textContent = readings.name;
+    document.getElementById('role').textContent = readings.role;
+    document.getElementById('age').textContent = workerInfo.age || "N/A";
+    document.getElementById('working-level').textContent = workerInfo.workingLevel;
+    
+    currentProfile = riskProfiles.find(p => p.uid === readings.uid) || currentProfile;
+    document.getElementById('risk-profile').textContent = `${currentProfile.name} (Temp: ${currentProfile.tempThreshold}°C, Gas: ${currentProfile.gasThreshold}, Buzzer: ${currentProfile.buzzer ? "On" : "Off"})`;
+}
 
-    sensorChart.data.labels = labels;
-    sensorChart.data.datasets[0].data = tempData;
-    sensorChart.data.datasets[1].data = humidityData;
-    sensorChart.data.datasets[2].data = gasData;
-    sensorChart.data.datasets[3].data = distanceData;
+// Update Sensor Readings
+function updateSensorReadings(readings) {
+    let statuses = calculateStatuses(readings);
+    
+    gauges.temp.refresh(readings.temp);
+    document.getElementById('temp-value').textContent = readings.temp.toFixed(1);
+    document.getElementById('temp-status').textContent = statuses.temp;
+    document.getElementById('temp-status').className = `status-badge ${statuses.temp.toLowerCase()}`;
+
+    gauges.hum.refresh(readings.hum);
+    document.getElementById('hum-value').textContent = readings.hum.toFixed(1);
+    document.getElementById('hum-status').textContent = statuses.hum;
+    document.getElementById('hum-status').className = `status-badge ${statuses.hum.toLowerCase()}`;
+
+    gauges.realfeel.refresh(readings.realfeel);
+    document.getElementById('realfeel-value').textContent = readings.realfeel.toFixed(1);
+    document.getElementById('realfeel-status').textContent = statuses.realfeel;
+    document.getElementById('realfeel-status').className = `status-badge ${statuses.realfeel.toLowerCase()}`;
+
+    gauges.gas.refresh(readings.gas);
+    document.getElementById('gas-value').textContent = readings.gas;
+    document.getElementById('gas-status').textContent = statuses.gas;
+    document.getElementById('gas-status').className = `status-badge ${statuses.gas.toLowerCase()}`;
+
+    gauges.crowd.refresh(readings.crowd);
+    document.getElementById('crowd-value').textContent = readings.crowd;
+    document.getElementById('crowd-status').textContent = statuses.crowd;
+    document.getElementById('crowd-status').className = `status-badge ${statuses.crowd.toLowerCase()}`;
+}
+
+// Calculate Sensor Statuses
+function calculateStatuses(readings) {
+    let statuses = {};
+    
+    statuses.temp = readings.temp <= currentProfile.tempThreshold - 5 ? "Normal" :
+                    readings.temp <= currentProfile.tempThreshold ? "Warning" : "Critical";
+    
+    statuses.hum = readings.hum <= 80 ? "Normal" :
+                   readings.hum <= 85 ? "Warning" : "Critical";
+    
+    statuses.realfeel = readings.realfeel <= (currentProfile.tempThreshold + 7) - 5 ? "Normal" :
+                        readings.realfeel <= (currentProfile.tempThreshold + 7) ? "Warning" : "Critical";
+    
+    statuses.gas = readings.gas <= currentProfile.gasThreshold - 1000 ? "Normal" :
+                   readings.gas <= currentProfile.gasThreshold ? "Warning" : "Critical";
+    
+    statuses.crowd = readings.crowd >= 30 ? "Normal" :
+                     readings.crowd >= 15 ? "Warning" : "Critical";
+    
+    return statuses;
+}
+
+// Update Sensor Chart
+function updateSensorChart(readings) {
+    sensorData.temp.push(readings.temp);
+    sensorData.hum.push(readings.hum);
+    sensorData.realfeel.push(readings.realfeel);
+    sensorData.gas.push(readings.gas);
+    sensorData.crowd.push(readings.crowd);
+    sensorData.timestamps.push(new Date().toLocaleTimeString());
+    
+    if (sensorData.temp.length > sensorData.maxLength) {
+        sensorData.temp.shift();
+        sensorData.hum.shift();
+        sensorData.realfeel.shift();
+        sensorData.gas.shift();
+        sensorData.crowd.shift();
+        sensorData.timestamps.shift();
+    }
+    
+    sensorChart.data.labels = sensorData.timestamps;
+    sensorChart.data.datasets[0].data = sensorData.temp;
+    sensorChart.data.datasets[1].data = sensorData.hum;
+    sensorChart.data.datasets[2].data = sensorData.realfeel;
+    sensorChart.data.datasets[3].data = sensorData.gas;
+    sensorChart.data.datasets[4].data = sensorData.crowd;
     sensorChart.update();
-  } catch (error) {
-    console.error('Error fetching trend data:', error);
-    trendsLoading.classList.add('hidden');
-    trendsError.classList.remove('hidden');
-  }
 }
 
-// Fetch RFID timeline
-async function fetchRFIDTimeline() {
-  try {
-    const data = await fetchData(rfidFeedURL, 'rfidData');
-    rfidTimeline.innerHTML = '';
-    if (!data || !data.feeds) {
-      rfidTimeline.innerHTML = '<p class="text-red-500">No RFID data available</p>';
-      return;
+// Update Warnings
+function updateWarnings(readings) {
+    let warnings = [];
+    let statuses = calculateStatuses(readings);
+    let riskLevel = calculateRiskLevel(statuses);
+    let ageGroup = workerInfo.age > 50 ? "Older" : workerInfo.age > 30 ? "Middle" : "Young";
+    let urgency = riskLevel === "High" ? "URGENT: " : riskLevel === "Moderate" ? "CAUTION: " : "";
+
+    if (statuses.temp === "Critical") {
+        if (ageGroup === "Older") warnings.push(`${urgency}High temp! Rest in cool area now.`);
+        else if (readings.role === "Engineer") warnings.push(`${urgency}High temp! Check cooling systems.`);
+        else if (readings.role === "Supervisor") warnings.push(`${urgency}High temp! Ensure team cools down.`);
+        else warnings.push(`${urgency}High temp! Move to shaded area.`);
+        if (workerInfo.workingLevel === "High") warnings.push(`${urgency}Critical temp! Evacuate if persists.`);
+    } else if (statuses.temp === "Warning") {
+        warnings.push(`${urgency}Rising temp! ${ageGroup === "Young" ? "Stay hydrated." : "Take frequent breaks."}`);
     }
 
-    const feeds = data.feeds.reverse();
-    feeds.forEach(feed => {
-      if (feed.field5 || feed.field6 || feed.field7) {
-        const item = document.createElement('div');
-        item.className = 'timeline-item p-4 rounded dark:bg-gray-700 animate-fadeIn';
-        item.innerHTML = `
-          <p class="text-sm text-gray-500 dark:text-gray-400"><strong>Time:</strong> ${new Date(feed.created_at).toLocaleString()}</p>
-          <p><strong>UID:</strong> ${feed.field5 || 'N/A'}</p>
-          <p><strong>Name:</strong> ${feed.field6 || 'N/A'}</p>
-          <p><strong>Role:</strong> ${feed.field7 || 'N/A'}</p>
-        `;
-        rfidTimeline.appendChild(item);
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching RFID data:', error);
-    rfidTimeline.innerHTML = '<p class="text-red-500">Error loading RFID data</p>';
-  }
+    if (statuses.hum === "Critical") {
+        if (ageGroup === "Older") warnings.push(`${urgency}High humidity! Seek dry area.`);
+        else if (readings.role === "Engineer") warnings.push(`${urgency}High humidity! Increase ventilation.`);
+        else if (readings.role === "Supervisor") warnings.push(`${urgency}High humidity! Ensure vents are open.`);
+        else warnings.push(`${urgency}High humidity! Avoid exertion.`);
+    }
+
+    if (statuses.realfeel === "Critical") {
+        if (ageGroup === "Older") warnings.push(`${urgency}Extreme heat index! Rest immediately.`);
+        else if (readings.role === "Engineer") warnings.push(`${urgency}Extreme heat index! Use cooling fans.`);
+        else if (readings.role === "Supervisor") warnings.push(`${urgency}Extreme heat index! Limit team work.`);
+        else warnings.push(`${urgency}Extreme heat index! Find shade.`);
+    }
+
+    if (statuses.gas === "Critical") {
+        if (ageGroup === "Older") warnings.push(`${urgency}Dangerous gas! Leave area now.`);
+        else if (readings.role === "Engineer") warnings.push(`${urgency}Dangerous gas! Ventilate immediately.`);
+        else if (readings.role === "Supervisor") warnings.push(`${urgency}Dangerous gas! Evacuate team.`);
+        else warnings.push(`${urgency}Dangerous gas! Move to fresh air.`);
+    }
+
+    if (statuses.crowd === "Critical") {
+        if (ageGroup === "Older") warnings.push(`${urgency}Overcrowded! Move to open space.`);
+        else if (readings.role === "Engineer") warnings.push(`${urgency}Overcrowded! Clear work area.`);
+        else if (readings.role === "Supervisor") warnings.push(`${urgency}Overcrowded! Disperse team.`);
+        else warnings.push(`${urgency}Overcrowded! Maintain distance.`);
+    }
+
+    let warningsList = document.getElementById('warnings');
+    warningsList.innerHTML = warnings.map((w, i) => `<li class="${w.includes('URGENT') ? 'critical' : w.includes('CAUTION') ? 'warning' : ''}">${i + 1}. ${w}</li>`).join('');
 }
 
-// Manual refresh
-refreshBtn.addEventListener('click', () => {
-  refreshBtn.disabled = true;
-  refreshBtn.innerHTML = '<svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Refreshing...';
-  Promise.all([fetchLatestData(), fetchTrendData(), fetchRFIDTimeline()]).then(() => {
-    refreshBtn.disabled = false;
-    refreshBtn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Refresh';
-  });
-});
+// Calculate Risk Level
+function calculateRiskLevel(statuses) {
+    if (Object.values(statuses).includes("Critical")) return "High";
+    if (Object.values(statuses).includes("Warning")) return "Moderate";
+    return "Low";
+}
 
-// Initial setup
-initGauges();
-fetchLatestData();
-fetchRFIDTimeline();
-setInterval(fetchLatestData, 30000);
-setInterval(fetchRFIDTimeline, 60000);
+// Update Health Tips
+function updateHealthTips(readings) {
+    let riskLevel = calculateRiskLevel(calculateStatuses(readings));
+    let tip = HEALTH_TIPS[currentTipIndex];
+    if (riskLevel === "High") {
+        if (workerInfo.age > 50) tip = "Seek shade, rest immediately.";
+        else if (readings.role === "Engineer") tip = "Stop work, check cooling systems.";
+        else if (readings.role === "Supervisor") tip = "Evacuate team, ensure safety.";
+        else tip = "Move to cooler area now.";
+    } else if (riskLevel === "Moderate") {
+        if (workerInfo.age > 50) tip = "Monitor health, take frequent breaks.";
+        else if (readings.role === "Engineer") tip = "Wear light clothing, check vents.";
+        else if (readings.role === "Supervisor") tip = "Ensure team takes breaks.";
+        else tip = "Stay alert, hydrate often.";
+    }
+    
+    let tipElement = document.getElementById('health-tip');
+    tipElement.style.opacity = 0;
+    setTimeout(() => {
+        tipElement.textContent = tip;
+        tipElement.style.opacity = 1;
+    }, 500);
+    
+    currentTipIndex = (currentTipIndex + 1) % HEALTH_TIPS.length;
+}
+
+// Show Toast
+function showToast(message, isError = false) {
+    let toast = document.getElementById('toast');
+    let toastMessage = document.getElementById('toast-message');
+    toastMessage.textContent = message;
+    toast.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${isError ? 'bg-red-600' : 'bg-blue-600'} text-white animate-pulse`;
+    toast.style.display = 'block';
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+}
+
+// Periodic Updates
+setInterval(fetchData, 16000);
+setInterval(updateHealthTips, 5000, { role: document.getElementById('role').textContent });
+fetchData();

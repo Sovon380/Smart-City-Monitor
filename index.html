@@ -40,145 +40,108 @@
         </script><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart City Monitor</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.4.0/justgage.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart City Monitoring Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.min.js"></script>
+    <!-- JustGage CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.6.1/justgage.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-inter transition-colors duration-300">
-  <div class="flex min-h-screen">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white dark:bg-gray-800 shadow-lg fixed h-full">
-      <div class="p-4">
-        <div class="flex items-center mb-6">
-          <img src="logo.jpg" alt="Smart City Monitor Logo" class="w-10 h-10 mr-2">
-          <h1 class="text-xl font-bold">Smart City Monitor</h1>
-        </div>
-        <nav>
-          <ul>
-            <li><a href="#dashboard" class="block py-2 px-4 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">Dashboard</a></li>
-            <li><a href="#trends" class="block py-2 px-4 text-gray-600 dark:text-gray-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">Trends</a></li>
-            <li><a href="#rfid" class="block py-2 px-4 text-gray-600 dark:text-gray-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded">RFID Timeline</a></li>
-          </ul>
-        </nav>
-        <div class="absolute bottom-4 left-4">
-          <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <header class="bg-blue-600 dark:bg-blue-800 text-white p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">🏙️ Smart City Monitoring</h1>
+        <button id="theme-toggle" class="p-2 rounded bg-gray-200 dark:bg-gray-700">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
-          </button>
-        </div>
-      </div>
-    </aside>
+        </button>
+    </header>
 
-    <!-- Main Content -->
-    <main class="ml-64 p-6 flex-1">
-      <div class="max-w-6xl mx-auto">
-        <!-- Status and Controls -->
-        <section id="dashboard" class="mb-8">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-2xl font-semibold">Dashboard</h2>
-            <button id="refresh-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center">
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
-          </div>
-          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
-            <h3 class="text-lg font-medium">Status: <span id="status" class="font-bold">Loading...</span></h3>
-          </div>
-
-          <!-- Sensor Gauges -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
-              <h3 class="text-md font-medium mb-2">Temperature (°C)</h3>
-              <div id="temp-gauge" class="w-full h-32"></div>
-              <p class="text-center mt-2" id="temp-value">Loading...</p>
-              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
-                Current temperature in °C
-              </div>
+    <main class="container mx-auto p-4">
+        <!-- Worker Info -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">👷 Worker Information</h2>
+            <div id="worker-info" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p><strong>UID:</strong> <span id="uid">N/A</span></p>
+                <p><strong>Name:</strong> <span id="worker-name">N/A</span></p>
+                <p><strong>Role:</strong> <span id="role">N/A</span></p>
+                <p><strong>Age:</strong> <span id="age">N/A</span></p>
+                <p><strong>Working Level:</strong> <span id="working-level">N/A</span></p>
+                <p><strong>Risk Profile:</strong> <span id="risk-profile">Default (Temp: 35°C, Gas: 3000, Buzzer: On)</span></p>
             </div>
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
-              <h3 class="text-md font-medium mb-2">Humidity (%)</h3>
-              <div id="humidity-gauge" class="w-full h-32"></div>
-              <p class="text-center mt-2" id="humidity-value">Loading...</p>
-              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
-                Relative humidity percentage
-              </div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
-              <h3 class="text-md font-medium mb-2">Gas Level</h3>
-              <div id="gas-gauge" class="w-full h-32"></div>
-              <p class="text-center mt-2" id="gas-value">Loading...</p>
-              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
-                Gas sensor reading (0-4095)
-              </div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow relative group">
-              <h3 class="text-md font-medium mb-2">Crowd Distance (cm)</h3>
-              <div id="distance-gauge" class="w-full h-32"></div>
-              <p class="text-center mt-2" id="distance-value">Loading...</p>
-              <div class="tooltip hidden absolute bg-gray-800 text-white text-sm p-2 rounded shadow-lg -top-10 left-1/2 transform -translate-x-1/2">
-                Distance to nearest obstacle
-              </div>
-            </div>
-          </div>
         </section>
 
-        <!-- Sensor Trends -->
-        <section id="trends" class="mb-8">
-          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <button id="trends-toggle" class="w-full text-left text-lg font-medium mb-2 flex justify-between items-center">
-              📊 Sensor Trends
-              <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div id="trends-content" class="hidden">
-              <div id="trends-loading" class="text-center py-4 text-gray-500 dark:text-gray-400">
-                <svg class="w-6 h-6 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Loading trends...
-              </div>
-              <canvas id="sensorChart" class="mt-4"></canvas>
-              <p id="trends-error" class="hidden text-center py-4 text-red-500">Error loading trends. Please try again.</p>
+        <!-- Sensor Readings -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">📊 Sensor Readings</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <h3>Temperature (°C)</h3>
+                    <div id="temp-gauge" class="w-full h-40"></div>
+                    <p class="text-center"><span id="temp-value">0</span> °C <span id="temp-status" class="status-badge"></span></p>
+                </div>
+                <div>
+                    <h3>Humidity (%)</h3>
+                    <div id="hum-gauge" class="w-full h-40"></div>
+                    <p class="text-center"><span id="hum-value">70</span> % <span id="hum-status" class="status-badge"></span></p>
+                </div>
+                <div>
+                    <h3>Real Feel (°C)</h3>
+                    <div id="realfeel-gauge" class="w-full h-40"></div>
+                    <p class="text-center"><span id="realfeel-value">0</span> °C <span id="realfeel-status" class="status-badge"></span></p>
+                </div>
+                <div>
+                    <h3>Gas Level</h3>
+                    <div id="gas-gauge" class="w-full h-40"></div>
+                    <p class="text-center"><span id="gas-value">0</span> <span id="gas-status" class="status-badge"></span></p>
+                </div>
+                <div>
+                    <h3>Crowd Distance (cm)</h3>
+                    <div id="crowd-gauge" class="w-full h-40"></div>
+                    <p class="text-center"><span id="crowd-value">0</span> cm <span id="crowd-status" class="status-badge"></span></p>
+                </div>
             </div>
-          </div>
         </section>
 
-        <!-- RFID Timeline -->
-        <section id="rfid">
-          <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <button id="rfid-toggle" class="w-full text-left text-lg font-medium mb-2 flex justify-between items-center">
-              🕒 RFID Scan Timeline
-              <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div id="rfid-content" class="hidden">
-              <div id="rfid-timeline" class="space-y-4"></div>
-            </div>
-          </div>
+        <!-- Personalized Warnings -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">⚠️ Personalized Warnings</h2>
+            <ul id="warnings" class="list-decimal pl-6 space-y-2"></ul>
         </section>
 
-        <!-- Alert Modal -->
-        <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-          <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
-            <h3 class="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">⚠️ Critical Alert</h3>
-            <p id="alert-message" class="mb-4"></p>
-            <button id="alert-close" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded w-full">Acknowledge</button>
-          </div>
-        </div>
-      </div>
+        <!-- Health Tips -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">💡 Health Tips</h2>
+            <p id="health-tip" class="italic">Stay hydrated, drink water regularly.</p>
+        </section>
+
+        <!-- Sensor Graphs -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">📈 Sensor Trends</h2>
+            <canvas id="sensor-chart" class="w-full h-96"></canvas>
+        </section>
+
+        <!-- Map Placeholder -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">🗺️ Sensor Locations</h2>
+            <div id="map" class="w-full h-64 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <p>Interactive Map (Future Implementation)</p>
+            </div>
+        </section>
     </main>
-  </div>
-  <script src="script.js"></script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg hidden animate-pulse">
+        <p id="toast-message"></p>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="script.js"></script>
 </body>
 </html>

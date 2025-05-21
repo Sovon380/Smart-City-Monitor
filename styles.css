@@ -1,60 +1,54 @@
-/* Custom styles to complement Tailwind */
-.font-inter {
-  font-family: 'Inter', sans-serif;
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-.gauge {
-  margin: 0 auto;
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
 }
 
-#sensorChart {
-  max-height: 400px;
-  width: 100%;
+.normal { background-color: #4CAF50; color: white; }
+.warning { background-color: #FFC107; color: black; }
+.critical { background-color: #F44336; color: white; }
+
+#toast {
+    transition: opacity 0.5s;
 }
 
-#rfid-timeline .timeline-item {
-  padding: 12px;
-  border-left: 4px solid #3b82f6;
-  background: #f8fafc;
-  border-radius: 6px;
-  transition: background 0.3s, transform 0.2s;
-  cursor: pointer;
+.animate-pulse {
+    animation: pulse 1.5s infinite;
 }
 
-#rfid-timeline .timeline-item:hover {
-  background: #e0f2fe;
-  transform: translateX(4px);
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
-#rfid-timeline .timeline-item.dark {
-  background: #1f2937;
+#warnings li.critical {
+    color: #F44336;
+    font-weight: bold;
+    animation: fadeIn 0.5s;
 }
 
-#rfid-timeline .timeline-item.dark:hover {
-  background: #3b82f6;
+#warnings li.warning {
+    color: #FFC107;
 }
 
-.group:hover .tooltip {
-  display: block;
-}
-
-.tooltip {
-  z-index: 10;
+#health-tip {
+    transition: opacity 0.5s;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
+@media (max-width: 640px) {
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    .grid-cols-3 { grid-template-columns: 1fr; }
 }
