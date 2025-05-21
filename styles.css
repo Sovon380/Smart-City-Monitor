@@ -1,58 +1,63 @@
 body {
-       font-family: 'Inter', sans-serif;
-       margin: 0;
-       padding: 0;
-   }
-   .status-badge {
-       padding: 4px 12px;
-       border-radius: 9999px;
-       font-size: 0.9em;
-       font-weight: 500;
-   }
-   .normal { background-color: #4CAF50; color: white; }
-   .warning { background-color: #FFC107; color: black; }
-   .critical { background-color: #F44336; color: white; }
-   #toast {
-       transition: opacity 0.5s ease-in-out;
-   }
-   .animate-pulse {
-       animation: pulse 1.5s infinite;
-   }
-   @keyframes pulse {
-       0% { opacity: 1; }
-       50% { opacity: 0.6; }
-       100% { opacity: 1; }
-   }
-   #warnings li {
-       transition: all 0.3s ease;
-   }
-   #warnings li.critical {
-       color: #F44336;
-       font-weight: bold;
-       background-color: rgba(244, 67, 54, 0.1);
-       padding: 4px 8px;
-       border-radius: 4px;
-       animation: fadeIn 0.5s;
-   }
-   #warnings li.warning {
-       color: #FFC107;
-       background-color: rgba(255, 193, 7, 0.1);
-       padding: 4px 8px;
-       border-radius: 4px;
-   }
-   .animate-fade-in {
-       animation: fadeIn 0.5s;
-   }
-   @keyframes fadeIn {
-       from { opacity: 0; transform: translateY(10px); }
-       to { opacity: 1; transform: translateY(0); }
-   }
-   section {
-       transition: transform 0.2s ease;
-   }
-   @media (max-width: 640px) {
-       h1 { font-size: 1.5rem; }
-       h2 { font-size: 1.25rem; }
-       .grid-cols-3 { grid-template-columns: 1fr; }
-       #sensor-chart { height: 60vw !important; }
-   }
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+.normal { background-color: #4CAF50; color: white; }
+.warning { background-color: #FFC107; color: black; }
+.critical { background-color: #F44336; color: white; }
+#toast {
+    transition: opacity 0.5s ease-in-out;
+}
+.animate-pulse {
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+#warnings li {
+    transition: all 0.3s ease;
+}
+#warnings li.critical {
+    color: #F44336;
+    font-weight: bold;
+    background-color: rgba(244, 67, 54, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    animation: fadeIn 0.5s;
+}
+#warnings li.warning {
+    color: #FFC107;
+    background-color: rgba(255, 193, 7, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.animate-fade-in {
+    animation: fadeIn 0.5s;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+section {
+    transition: transform 0.2s ease;
+}
+.gauge-container:empty::after {
+    content: "Loading...";
+    color: #999;
+    font-style: italic;
+}
+@media (max-width: 640px) {
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    .grid-cols-3 { grid-template-columns: 1fr; }
+    #sensor-chart { height: 60vw !important; }
+}
