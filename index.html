@@ -42,7 +42,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart City Monitoring Dashboard</title>
+    <title>Smart City Real-Time Monitoring</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
@@ -71,15 +71,12 @@
                 <p><strong>UID:</strong> <span id="uid">N/A</span></p>
                 <p><strong>Name:</strong> <span id="worker-name">N/A</span></p>
                 <p><strong>Role:</strong> <span id="role">N/A</span></p>
-                <p><strong>Age:</strong> <span id="age">N/A</span></p>
-                <p><strong>Working Level:</strong> <span id="working-level">N/A</span></p>
-                <p><strong>Risk Profile:</strong> <span id="risk-profile">Default (Temp: 35°C, Gas: 3000, Buzzer: On)</span></p>
             </div>
         </section>
 
         <!-- Sensor Readings -->
         <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold mb-4">📊 Sensor Readings</h2>
+            <h2 class="text-xl font-semibold mb-4">📊 Real-Time Sensor Readings</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                     <h3>Temperature (°C)</h3>
@@ -109,30 +106,19 @@
             </div>
         </section>
 
-        <!-- Personalized Warnings -->
+        <!-- Personalized Suggestions -->
         <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold mb-4">⚠️ Personalized Warnings</h2>
-            <ul id="warnings" class="list-decimal pl-6 space-y-2"></ul>
-        </section>
-
-        <!-- Health Tips -->
-        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold mb-4">💡 Health Tips</h2>
+            <h2 class="text-xl font-semibold mb-4">⚠️ Personalized Suggestions</h2>
+            <h3 class="text-lg font-medium mb-2">Warnings</h3>
+            <ul id="warnings" class="list-decimal pl-6 space-y-2 mb-4"></ul>
+            <h3 class="text-lg font-medium mb-2">Health Tip</h3>
             <p id="health-tip" class="italic">Stay hydrated, drink water regularly.</p>
         </section>
 
-        <!-- Sensor Graphs -->
-        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+        <!-- Sensor Trends -->
+        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 class="text-xl font-semibold mb-4">📈 Sensor Trends</h2>
             <canvas id="sensor-chart" class="w-full h-96"></canvas>
-        </section>
-
-        <!-- Map Placeholder -->
-        <section class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold mb-4">🗺️ Sensor Locations</h2>
-            <div id="map" class="w-full h-64 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                <p>Interactive Map (Future Implementation)</p>
-            </div>
         </section>
     </main>
 

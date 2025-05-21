@@ -51,4 +51,5 @@ body {
     h1 { font-size: 1.5rem; }
     h2 { font-size: 1.25rem; }
     .grid-cols-3 { grid-template-columns: 1fr; }
+    #sensor-chart { height: 60vw !important; }
 }

@@ -1,4 +1,6 @@
-const THINGSPEAK_URL = 'https://api.thingspeak.com/channels/2936641/feeds.json?results=1';
+// Replace YOUR_READ_API_KEY with your actual ThingSpeak Read API Key
+const THINGSPEAK_URL = 'https://api.thingspeak.com/channels/2936641/feeds.json?api_key=
+98ZPQ930QYNNI2A9&results=1';
 const HEALTH_TIPS = [
     "Stay hydrated, drink water regularly.",
     "Wear light clothing in hot conditions.",
@@ -11,16 +13,9 @@ let sensorData = {
     temp: [], hum: [], realfeel: [], gas: [], crowd: [],
     timestamps: [], maxLength: 50
 };
+let lastReadings = null;
 let currentTipIndex = 0;
-let riskProfiles = [
-    { uid: "A1B2C3D4", name: "Alice (Engineer)", tempThreshold: 32.0, gasThreshold: 3000, buzzer: true },
-    { uid: "E5F6G7H8", name: "Bob (Supervisor)", tempThreshold: 35.0, gasThreshold: 2500, buzzer: true },
-    { uid: "I9J0K1L2", name: "Charlie (Engineer)", tempThreshold: 33.0, gasThreshold: 2800, buzzer: true },
-    { uid: "M3N4O5P6", name: "Diana (Visitor)", tempThreshold: 37.0, gasThreshold: 3500, buzzer: false },
-    { uid: "Q7R8S9T0", name: "Eve (Supervisor)", tempThreshold: 35.0, gasThreshold: 2700, buzzer: true }
-];
-let currentProfile = { uid: "", name: "Default", tempThreshold: 35.0, gasThreshold: 3000, buzzer: true };
-let workerInfo = { age: 0, workingLevel: "Low" };
+const DEFAULT_PROFILE = { tempThreshold: 35.0, gasThreshold: 3000, buzzer: true };
 
 // Gauges
 let gauges = {
@@ -62,6 +57,7 @@ let sensorChart = new Chart(ctx, {
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         scales: { x: { title: { display: true, text: 'Time' } } },
         plugins: { zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } } }
     }
@@ -82,9 +78,11 @@ if (localStorage.getItem('theme') === 'dark') {
 async function fetchData() {
     try {
         let response = await fetch(THINGSPEAK_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         let data = await response.json();
-        let feed = data.feeds[0];
+        if (!data.feeds || data.feeds.length === 0) throw new Error('No feeds available');
         
+        let feed = data.feeds[0];
         let readings = {
             temp: parseFloat(feed.field1) || 0,
             hum: parseFloat(feed.field2) || 70,
@@ -96,19 +94,20 @@ async function fetchData() {
             realfeel: parseFloat(feed.field8) || 0
         };
 
-        // Simulate Age and Working Level (not in ThingSpeak; assume from Arduino)
-        workerInfo.age = readings.name !== "N/A" ? (readings.name.includes("Alice") ? 30 : readings.name.includes("Bob") ? 45 : 55) : 0;
-        workerInfo.workingLevel = readings.name !== "N/A" ? (readings.name.includes("Alice") ? "High" : readings.name.includes("Bob") ? "Medium" : "Low") : "Low";
-
+        lastReadings = readings;
         updateWorkerInfo(readings);
         updateSensorReadings(readings);
         updateSensorChart(readings);
-        updateWarnings(readings);
-        updateHealthTips(readings);
+        updateSuggestions(readings);
         showToast(`Updated data for ${readings.name}`);
     } catch (error) {
         console.error('Error fetching data:', error);
-        showToast('Failed to fetch data', true);
+        showToast('Failed to fetch data, retrying...', true);
+        if (lastReadings) {
+            updateWorkerInfo(lastReadings);
+            updateSensorReadings(lastReadings);
+            updateSuggestions(lastReadings);
+        }
     }
 }
 
@@ -117,38 +116,33 @@ function updateWorkerInfo(readings) {
     document.getElementById('uid').textContent = readings.uid;
     document.getElementById('worker-name').textContent = readings.name;
     document.getElementById('role').textContent = readings.role;
-    document.getElementById('age').textContent = workerInfo.age || "N/A";
-    document.getElementById('working-level').textContent = workerInfo.workingLevel;
-    
-    currentProfile = riskProfiles.find(p => p.uid === readings.uid) || currentProfile;
-    document.getElementById('risk-profile').textContent = `${currentProfile.name} (Temp: ${currentProfile.tempThreshold}°C, Gas: ${currentProfile.gasThreshold}, Buzzer: ${currentProfile.buzzer ? "On" : "Off"})`;
 }
 
 // Update Sensor Readings
 function updateSensorReadings(readings) {
     let statuses = calculateStatuses(readings);
     
-    gauges.temp.refresh(readings.temp);
+    gauges.temp.refresh(readings.temp, 500);
     document.getElementById('temp-value').textContent = readings.temp.toFixed(1);
     document.getElementById('temp-status').textContent = statuses.temp;
     document.getElementById('temp-status').className = `status-badge ${statuses.temp.toLowerCase()}`;
 
-    gauges.hum.refresh(readings.hum);
+    gauges.hum.refresh(readings.hum, 500);
     document.getElementById('hum-value').textContent = readings.hum.toFixed(1);
     document.getElementById('hum-status').textContent = statuses.hum;
     document.getElementById('hum-status').className = `status-badge ${statuses.hum.toLowerCase()}`;
 
-    gauges.realfeel.refresh(readings.realfeel);
+    gauges.realfeel.refresh(readings.realfeel, 500);
     document.getElementById('realfeel-value').textContent = readings.realfeel.toFixed(1);
     document.getElementById('realfeel-status').textContent = statuses.realfeel;
     document.getElementById('realfeel-status').className = `status-badge ${statuses.realfeel.toLowerCase()}`;
 
-    gauges.gas.refresh(readings.gas);
+    gauges.gas.refresh(readings.gas, 500);
     document.getElementById('gas-value').textContent = readings.gas;
     document.getElementById('gas-status').textContent = statuses.gas;
     document.getElementById('gas-status').className = `status-badge ${statuses.gas.toLowerCase()}`;
 
-    gauges.crowd.refresh(readings.crowd);
+    gauges.crowd.refresh(readings.crowd, 500);
     document.getElementById('crowd-value').textContent = readings.crowd;
     document.getElementById('crowd-status').textContent = statuses.crowd;
     document.getElementById('crowd-status').className = `status-badge ${statuses.crowd.toLowerCase()}`;
@@ -158,17 +152,17 @@ function updateSensorReadings(readings) {
 function calculateStatuses(readings) {
     let statuses = {};
     
-    statuses.temp = readings.temp <= currentProfile.tempThreshold - 5 ? "Normal" :
-                    readings.temp <= currentProfile.tempThreshold ? "Warning" : "Critical";
+    statuses.temp = readings.temp <= DEFAULT_PROFILE.tempThreshold - 5 ? "Normal" :
+                    readings.temp <= DEFAULT_PROFILE.tempThreshold ? "Warning" : "Critical";
     
     statuses.hum = readings.hum <= 80 ? "Normal" :
                    readings.hum <= 85 ? "Warning" : "Critical";
     
-    statuses.realfeel = readings.realfeel <= (currentProfile.tempThreshold + 7) - 5 ? "Normal" :
-                        readings.realfeel <= (currentProfile.tempThreshold + 7) ? "Warning" : "Critical";
+    statuses.realfeel = readings.realfeel <= (DEFAULT_PROFILE.tempThreshold + 7) - 5 ? "Normal" :
+                        readings.realfeel <= (DEFAULT_PROFILE.tempThreshold + 7) ? "Warning" : "Critical";
     
-    statuses.gas = readings.gas <= currentProfile.gasThreshold - 1000 ? "Normal" :
-                   readings.gas <= currentProfile.gasThreshold ? "Warning" : "Critical";
+    statuses.gas = readings.gas <= DEFAULT_PROFILE.gasThreshold - 1000 ? "Normal" :
+                   readings.gas <= DEFAULT_PROFILE.gasThreshold ? "Warning" : "Critical";
     
     statuses.crowd = readings.crowd >= 30 ? "Normal" :
                      readings.crowd >= 15 ? "Warning" : "Critical";
@@ -203,75 +197,60 @@ function updateSensorChart(readings) {
     sensorChart.update();
 }
 
-// Update Warnings
-function updateWarnings(readings) {
+// Update Suggestions (Warnings and Health Tips)
+function updateSuggestions(readings) {
     let warnings = [];
     let statuses = calculateStatuses(readings);
     let riskLevel = calculateRiskLevel(statuses);
-    let ageGroup = workerInfo.age > 50 ? "Older" : workerInfo.age > 30 ? "Middle" : "Young";
     let urgency = riskLevel === "High" ? "URGENT: " : riskLevel === "Moderate" ? "CAUTION: " : "";
 
+    // Warnings (role-based, mirroring Arduino's safetyMonitor)
     if (statuses.temp === "Critical") {
-        if (ageGroup === "Older") warnings.push(`${urgency}High temp! Rest in cool area now.`);
-        else if (readings.role === "Engineer") warnings.push(`${urgency}High temp! Check cooling systems.`);
+        if (readings.role === "Engineer") warnings.push(`${urgency}High temp! Check cooling systems.`);
         else if (readings.role === "Supervisor") warnings.push(`${urgency}High temp! Ensure team cools down.`);
         else warnings.push(`${urgency}High temp! Move to shaded area.`);
-        if (workerInfo.workingLevel === "High") warnings.push(`${urgency}Critical temp! Evacuate if persists.`);
     } else if (statuses.temp === "Warning") {
-        warnings.push(`${urgency}Rising temp! ${ageGroup === "Young" ? "Stay hydrated." : "Take frequent breaks."}`);
+        warnings.push(`${urgency}Rising temp! Stay hydrated.`);
     }
 
     if (statuses.hum === "Critical") {
-        if (ageGroup === "Older") warnings.push(`${urgency}High humidity! Seek dry area.`);
-        else if (readings.role === "Engineer") warnings.push(`${urgency}High humidity! Increase ventilation.`);
+        if (readings.role === "Engineer") warnings.push(`${urgency}High humidity! Increase ventilation.`);
         else if (readings.role === "Supervisor") warnings.push(`${urgency}High humidity! Ensure vents are open.`);
         else warnings.push(`${urgency}High humidity! Avoid exertion.`);
     }
 
     if (statuses.realfeel === "Critical") {
-        if (ageGroup === "Older") warnings.push(`${urgency}Extreme heat index! Rest immediately.`);
-        else if (readings.role === "Engineer") warnings.push(`${urgency}Extreme heat index! Use cooling fans.`);
+        if (readings.role === "Engineer") warnings.push(`${urgency}Extreme heat index! Use cooling fans.`);
         else if (readings.role === "Supervisor") warnings.push(`${urgency}Extreme heat index! Limit team work.`);
         else warnings.push(`${urgency}Extreme heat index! Find shade.`);
     }
 
     if (statuses.gas === "Critical") {
-        if (ageGroup === "Older") warnings.push(`${urgency}Dangerous gas! Leave area now.`);
-        else if (readings.role === "Engineer") warnings.push(`${urgency}Dangerous gas! Ventilate immediately.`);
+        if (readings.role === "Engineer") warnings.push(`${urgency}Dangerous gas! Ventilate immediately.`);
         else if (readings.role === "Supervisor") warnings.push(`${urgency}Dangerous gas! Evacuate team.`);
         else warnings.push(`${urgency}Dangerous gas! Move to fresh air.`);
     }
 
     if (statuses.crowd === "Critical") {
-        if (ageGroup === "Older") warnings.push(`${urgency}Overcrowded! Move to open space.`);
-        else if (readings.role === "Engineer") warnings.push(`${urgency}Overcrowded! Clear work area.`);
+        if (readings.role === "Engineer") warnings.push(`${urgency}Overcrowded! Clear work area.`);
         else if (readings.role === "Supervisor") warnings.push(`${urgency}Overcrowded! Disperse team.`);
         else warnings.push(`${urgency}Overcrowded! Maintain distance.`);
     }
 
+    // Update warnings
     let warningsList = document.getElementById('warnings');
-    warningsList.innerHTML = warnings.map((w, i) => `<li class="${w.includes('URGENT') ? 'critical' : w.includes('CAUTION') ? 'warning' : ''}">${i + 1}. ${w}</li>`).join('');
-}
+    warningsList.innerHTML = warnings.length > 0 ?
+        warnings.map((w, i) => `<li class="${w.includes('URGENT') ? 'critical' : w.includes('CAUTION') ? 'warning' : ''}">${i + 1}. ${w}</li>`).join('') :
+        '<li class="text-green-600">No warnings, environment stable.</li>';
 
-// Calculate Risk Level
-function calculateRiskLevel(statuses) {
-    if (Object.values(statuses).includes("Critical")) return "High";
-    if (Object.values(statuses).includes("Warning")) return "Moderate";
-    return "Low";
-}
-
-// Update Health Tips
-function updateHealthTips(readings) {
-    let riskLevel = calculateRiskLevel(calculateStatuses(readings));
+    // Health Tip
     let tip = HEALTH_TIPS[currentTipIndex];
     if (riskLevel === "High") {
-        if (workerInfo.age > 50) tip = "Seek shade, rest immediately.";
-        else if (readings.role === "Engineer") tip = "Stop work, check cooling systems.";
+        if (readings.role === "Engineer") tip = "Stop work, check cooling systems.";
         else if (readings.role === "Supervisor") tip = "Evacuate team, ensure safety.";
         else tip = "Move to cooler area now.";
     } else if (riskLevel === "Moderate") {
-        if (workerInfo.age > 50) tip = "Monitor health, take frequent breaks.";
-        else if (readings.role === "Engineer") tip = "Wear light clothing, check vents.";
+        if (readings.role === "Engineer") tip = "Wear light clothing, check vents.";
         else if (readings.role === "Supervisor") tip = "Ensure team takes breaks.";
         else tip = "Stay alert, hydrate often.";
     }
@@ -284,6 +263,13 @@ function updateHealthTips(readings) {
     }, 500);
     
     currentTipIndex = (currentTipIndex + 1) % HEALTH_TIPS.length;
+}
+
+// Calculate Risk Level
+function calculateRiskLevel(statuses) {
+    if (Object.values(statuses).includes("Critical")) return "High";
+    if (Object.values(statuses).includes("Warning")) return "Moderate";
+    return "Low";
 }
 
 // Show Toast
@@ -299,6 +285,6 @@ function showToast(message, isError = false) {
 }
 
 // Periodic Updates
-setInterval(fetchData, 16000);
-setInterval(updateHealthTips, 5000, { role: document.getElementById('role').textContent });
-fetchData();
+setInterval(fetchData, 5000); // Poll every 5 seconds
+setInterval(() => updateSuggestions(lastReadings || { role: "N/A" }), 5000); // Update tips every 5s
+fetchData(); // Initial fetch
