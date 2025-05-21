@@ -1,6 +1,6 @@
 // ThingSpeak configuration
 const channelID = '2936641';
-const readAPIKey = '98ZPQ930QYNNI2A9'; 
+const readAPIKey = '98ZPQ930QYNNI2A9';
 const latestFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=1`;
 const trendFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=20`;
 const rfidFeedURL = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPIKey}&results=5`;
