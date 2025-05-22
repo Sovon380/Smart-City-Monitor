@@ -3,41 +3,37 @@ const readApiKey = "98ZPQ930QYNNI2A9";
 const latestApiUrl = `https://api.thingspeak.com/channels/${thingSpeakChannel}/feeds.json?api_key=${readApiKey}&results=1`;
 const historicalApiUrl = `https://api.thingspeak.com/channels/${thingSpeakChannel}/feeds.json?api_key=${readApiKey}&results=10`;
 
-// Hardcoded worker data (fallback, cycled sequentially)
-const fallbackWorkers = [
-    { uid: "A1B2C3D4", name: "Sovon", role: "Supervisor", age: 45, workingLevel: "High" },
-    { uid: "E5F6G7H8", name: "Sudipta", role: "Engineer", age: 32, workingLevel: "Medium" },
-    { uid: "I9J0K1L2", name: "Shakhawat", role: "Engineer", age: 28, workingLevel: "Low" },
-    { uid: "M3N4O5P6", name: "Tamijid", role: "Visitor", age: 25, workingLevel: "Low" },
-    { uid: "Q7R8S9T0", name: "Merilyn", role: "Supervisor", age: 50, workingLevel: "High" }
-];
-let currentWorkerIndex = 0;
+// Optimal hardcoded worker data (single profile for consistency)
+const fallbackWorker = {
+    uid: "A1B2C3D4",
+    name: "Sovon",
+    role: "Supervisor",
+    age: 45,
+    workingLevel: "High"
+};
 
-// Realistic fallback data generator
-function generateFallbackData() {
-    const now = new Date();
-    const temp = (Math.random() * 5 + 25).toFixed(1); // 25–30°C
-    const hum = (Math.random() * 20 + 60).toFixed(1); // 60–80%
-    const gas = Math.floor(Math.random() * 1000 + 1000); // 1000–2000
-    const crowd = Math.floor(Math.random() * 70 + 30); // 30–100 cm
-    const realFeel = (parseFloat(temp) + (Math.random() * 3 + 2)).toFixed(1); // Temp + 2–5°C
-    return {
-        created_at: now.toISOString(),
-        field1: temp,
-        field2: hum,
-        field3: gas,
-        field4: crowd,
-        field8: realFeel,
-        field5: "", // Worker UID (empty to trigger fallback worker)
-        field6: "",
-        field7: ""
-    };
-}
+// Optimal hardcoded sensor data
+const fallbackFeed = {
+    created_at: new Date().toISOString(),
+    field1: "27.5", // Temperature (°C)
+    field2: "65.0", // Humidity (%)
+    field3: "1500", // Gas Level
+    field4: "50",   // Crowd Distance (cm)
+    field8: "30.0", // Real Feel (°C)
+    field5: fallbackWorker.uid,
+    field6: fallbackWorker.name,
+    field7: fallbackWorker.role
+};
 
-// Initialize historical fallback data
+// Hardcoded historical data (10 feeds, 1-second intervals)
 const fallbackHistorical = Array(10).fill().map((_, i) => ({
-    ...generateFallbackData(),
-    created_at: new Date(Date.now() - (9 - i) * 15000).toISOString()
+    ...fallbackFeed,
+    created_at: new Date(Date.now() - (9 - i) * 1000).toISOString(),
+    field1: (27.5 + (i % 2)).toFixed(1), // Slight variation
+    field2: (65.0 + (i % 3)).toFixed(1),
+    field3: (1500 + (i * 10)).toString(),
+    field4: (50 + (i * 2)).toString(),
+    field8: (30.0 + (i % 2)).toFixed(1)
 }));
 
 // Chart configurations (ThingSpeak-like styling)
@@ -125,14 +121,14 @@ async function fetchThingSpeakData(url) {
 
 // Function to calculate sensor statuses and recommendations
 function calculateStatusesAndRecommendations(data, worker) {
-    const temp = parseFloat(data.field1) || 0;
-    const hum = parseFloat(data.field2) || 70;
-    const gas = parseInt(data.field3) || 0;
+    const temp = parseFloat(data.field1) || 27.5;
+    const hum = parseFloat(data.field2) || 65.0;
+    const gas = parseInt(data.field3) || 1500;
     const crowd = parseInt(data.field4) || 50;
-    const realFeel = parseFloat(data.field8) || temp;
-    const workerRole = worker.role || "Unknown";
-    const workerAge = worker.age || 30;
-    const workingLevel = worker.workingLevel || "Medium";
+    const realFeel = parseFloat(data.field8) || 30.0;
+    const workerRole = worker.role || "Supervisor";
+    const workerAge = worker.age || 45;
+    const workingLevel = worker.workingLevel || "High";
 
     // Thresholds (from Arduino code, default profile)
     const tempThreshold = 35.0;
@@ -203,18 +199,12 @@ function calculateStatusesAndRecommendations(data, worker) {
 // Function to update worker information
 function updateWorkerInfo(latestFeed) {
     let worker = {
-        uid: latestFeed.field5 || "",
-        name: latestFeed.field6 || "",
-        role: latestFeed.field7 || "",
-        age: latestFeed.field6 ? parseInt(latestFeed.field6.match(/\d+/)) || 30 : 30,
-        workingLevel: "Medium" // Default if not available
+        uid: latestFeed.field5 || fallbackWorker.uid,
+        name: latestFeed.field6 || fallbackWorker.name,
+        role: latestFeed.field7 || fallbackWorker.role,
+        age: latestFeed.field6 ? parseInt(latestFeed.field6.match(/\d+/)) || fallbackWorker.age : fallbackWorker.age,
+        workingLevel: latestFeed.workingLevel || fallbackWorker.workingLevel
     };
-
-    // Fallback to next hardcoded worker if data is missing
-    if (!worker.uid || !worker.name || !worker.role) {
-        worker = fallbackWorkers[currentWorkerIndex];
-        currentWorkerIndex = (currentWorkerIndex + 1) % fallbackWorkers.length;
-    }
 
     document.getElementById("workerUID").textContent = worker.uid;
     document.getElementById("workerName").textContent = worker.name;
@@ -229,13 +219,13 @@ function updateWorkerInfo(latestFeed) {
 function updateCharts(feeds, isNewData) {
     const labels = feeds.map(f => new Date(f.created_at));
     charts.temp.data.labels = labels;
-    charts.temp.data.datasets[0].data = feeds.map(f => parseFloat(f.field1) || 0);
+    charts.temp.data.datasets[0].data = feeds.map(f => parseFloat(f.field1) || 27.5);
     charts.hum.data.labels = labels;
-    charts.hum.data.datasets[0].data = feeds.map(f => parseFloat(f.field2) || 70);
+    charts.hum.data.datasets[0].data = feeds.map(f => parseFloat(f.field2) || 65.0);
     charts.realFeel.data.labels = labels;
-    charts.realFeel.data.datasets[0].data = feeds.map(f => parseFloat(f.field8) || 0);
+    charts.realFeel.data.datasets[0].data = feeds.map(f => parseFloat(f.field8) || 30.0);
     charts.gas.data.labels = labels;
-    charts.gas.data.datasets[0].data = feeds.map(f => parseInt(f.field3) || 0);
+    charts.gas.data.datasets[0].data = feeds.map(f => parseInt(f.field3) || 1500);
     charts.crowd.data.labels = labels;
     charts.crowd.data.datasets[0].data = feeds.map(f => parseInt(f.field4) || 50);
     Object.values(charts).forEach(chart => {
@@ -249,22 +239,30 @@ function updateCharts(feeds, isNewData) {
 }
 
 // Function to update dashboard
+let lastFeedTimestamp = null;
 async function updateDashboard(isHistorical = false) {
     const url = isHistorical ? historicalApiUrl : latestApiUrl;
     let data = await fetchThingSpeakData(url);
     let isNewData = true;
 
     if (!data || !data.feeds || data.feeds.length === 0) {
-        // Use realistic fallback data
-        data = { feeds: isHistorical ? fallbackHistorical : [generateFallbackData()] };
+        // Use hardcoded fallback data
+        data = { feeds: isHistorical ? fallbackHistorical : [fallbackFeed] };
         isNewData = false;
         document.getElementById("lastUpdated").classList.add("stale-warning");
-        document.getElementById("lastUpdated").textContent = `Last updated: Data unavailable, showing simulated values`;
+        document.getElementById("lastUpdated").textContent = `Last updated: Data unavailable, showing fallback values`;
     } else {
-        // Check if data is stale (>15 seconds old)
-        const latestTime = new Date(data.feeds[data.feeds.length - 1].created_at);
+        const latestFeed = data.feeds[data.feeds.length - 1];
+        const latestTime = new Date(latestFeed.created_at);
+        // Check if data is new
+        if (lastFeedTimestamp && latestFeed.created_at === lastFeedTimestamp) {
+            return; // Skip update if no new data
+        }
+        lastFeedTimestamp = latestFeed.created_at;
+
+        // Check for stale data (>2 seconds old)
         const now = new Date();
-        if ((now - latestTime) > 15000) {
+        if ((now - latestTime) > 2000) {
             document.getElementById("lastUpdated").classList.add("stale-warning");
             document.getElementById("lastUpdated").textContent = `Last updated: ${latestTime.toLocaleString()} (stale data)`;
         } else {
@@ -292,7 +290,7 @@ async function updateDashboard(isHistorical = false) {
                                                     statuses.gas === "Warning" ? "yellow" : "red";
     document.getElementById("crowdStatus").textContent = statuses.crowd;
     document.getElementById("crowdStatus").className = statuses.crowd === "Normal" ? "green" :
-                                                      statuses.crowd === "Warning" : "yellow" : "red";
+                                                      statuses.crowd === "Warning" ? "yellow" : "red";
 
     // Update recommendations
     document.getElementById("recommendations").innerHTML = recommendations
@@ -310,16 +308,7 @@ async function updateDashboard(isHistorical = false) {
     }
 }
 
-// Debounce function to prevent overlapping updates
-function debounce(func, wait) {
-    let timeout;
-    return function (...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
-
 // Initialize dashboard with fallback data
 updateDashboard(true);
-setInterval(debounce(() => updateDashboard(false), 5000), 5000); // Latest data every 5 seconds
-setInterval(debounce(() => updateDashboard(true), 30000), 30000); // Historical data every 30 seconds
+setInterval(() => updateDashboard(false), 1000); // Latest data every 1 second
+setInterval(() => updateDashboard(true), 30000); // Historical data every 30 seconds

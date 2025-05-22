@@ -81,4 +81,5 @@ canvas {
 /* Stale data warning */
 .stale-warning {
     color: #ef4444;
+    font-weight: bold;
 }

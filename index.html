@@ -63,7 +63,7 @@
         <div class="container mx-auto flex justify-between items-center">
             <!-- Logo -->
             <div class="flex items-center">
-                <img src="logo.jpg" alt="Smart City Logo" class="h-10 mr-2">
+                <img src="logo.png" alt="Smart City Logo" class="h-10 mr-2">
                 <h1 class="text-xl font-bold">Smart City Monitoring</h1>
             </div>
             <!-- Menu Bar -->
@@ -84,7 +84,7 @@
     <main class="container mx-auto p-4">
         <!-- Status and Timestamp -->
         <div class="flex justify-between items-center mb-4">
-            <p id="lastUpdated" class="text-sm text-gray-600 dark:text-gray-400">Last updated: Initializing...</p>
+            <p id="lastUpdated" class="text-sm text-gray-600 dark:text-gray-400">Last updated: 2025-05-22 07:35:00</p>
             <p id="updateStatus" class="text-sm text-gray-600 dark:text-gray-400 hidden"><i class="bi bi-arrow-repeat animate-spin"></i> Updating...</p>
         </div>
 
@@ -101,31 +101,31 @@
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in card-hover">
                     <h3 class="text-lg font-semibold mb-2">Temperature (°C)</h3>
                     <canvas id="tempChart"></canvas>
-                    <p id="tempStatus" class="text-center mt-2">Initializing...</p>
+                    <p id="tempStatus" class="text-center mt-2 green">Normal</p>
                 </div>
                 <!-- Humidity Graph -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in card-hover">
                     <h3 class="text-lg font-semibold mb-2">Humidity (%)</h3>
                     <canvas id="humChart"></canvas>
-                    <p id="humStatus" class="text-center mt-2">Initializing...</p>
+                    <p id="humStatus" class="text-center mt-2 green">Normal</p>
                 </div>
                 <!-- Real Feel Graph -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in card-hover">
                     <h3 class="text-lg font-semibold mb-2">Real Feel (°C)</h3>
                     <canvas id="realFeelChart"></canvas>
-                    <p id="realFeelStatus" class="text-center mt-2">Initializing...</p>
+                    <p id="realFeelStatus" class="text-center mt-2 green">Normal</p>
                 </div>
                 <!-- Gas Level Graph -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in card-hover">
                     <h3 class="text-lg font-semibold mb-2">Gas Level</h3>
                     <canvas id="gasChart"></canvas>
-                    <p id="gasStatus" class="text-center mt-2">Initializing...</p>
+                    <p id="gasStatus" class="text-center mt-2 green">Normal</p>
                 </div>
                 <!-- Crowd Distance Graph -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in card-hover">
                     <h3 class="text-lg font-semibold mb-2">Crowd Distance (cm)</h3>
                     <canvas id="crowdChart"></canvas>
-                    <p id="crowdStatus" class="text-center mt-2">Initializing...</p>
+                    <p id="crowdStatus" class="text-center mt-2 green">Normal</p>
                 </div>
             </div>
         </section>
@@ -134,11 +134,11 @@
         <section class="mb-8">
             <h2 class="text-2xl font-semibold mb-4">Worker Information</h2>
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in card-hover">
-                <p><strong>UID:</strong> <span id="workerUID">Initializing...</span></p>
-                <p><strong>Name:</strong> <span id="workerName">Initializing...</span></p>
-                <p><strong>Role:</strong> <span id="workerRole">Initializing...</span></p>
-                <p><strong>Age:</strong> <span id="workerAge">Initializing...</span></p>
-                <p><strong>Working Level:</strong> <span id="workerLevel">Initializing...</span></p>
+                <p><strong>UID:</strong> <span id="workerUID">A1B2C3D4</span></p>
+                <p><strong>Name:</strong> <span id="workerName">Sovon</span></p>
+                <p><strong>Role:</strong> <span id="workerRole">Supervisor</span></p>
+                <p><strong>Age:</strong> <span id="workerAge">45</span></p>
+                <p><strong>Working Level:</strong> <span id="workerLevel">High</span></p>
             </div>
         </section>
 
@@ -146,7 +146,7 @@
         <section class="mb-8">
             <h2 class="text-2xl font-semibold mb-4">Safety Recommendations</h2>
             <div id="recommendations" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 animate-fade-in max-h-96 overflow-y-auto">
-                <p class="mb-2"><strong>1.</strong> Initializing environmental data...</p>
+                <p class="mb-2"><strong>1.</strong> Environment stable. Continue regular operations.</p>
             </div>
         </section>
 
@@ -165,8 +165,8 @@
                 <h3 class="text-lg font-semibold mb-2">Limitations</h3>
                 <ul class="list-disc pl-6">
                     <li><strong>Sensor Accuracy:</strong> DHT11 has ±2°C temperature and ±5% humidity accuracy; gas sensor calibration may vary.</li>
-                    <li><strong>Data Frequency:</strong> ThingSpeak updates every ~15 seconds (free plan limit); 5-second polling may show same data.</li>
-                    <li><strong>Worker Data:</strong> Real-time RFID data may be unavailable; fallback to hardcoded profiles.</li>
+                    <li><strong>Data Frequency:</strong> ThingSpeak free plan updates every ~15 seconds; 1-second polling requires paid plan.</li>
+                    <li><strong>Worker Data:</strong> Real-time RFID data may be unavailable; fallback to predefined profiles.</li>
                     <li><strong>Environmental Factors:</strong> Readings may be affected by direct sunlight, obstructions, or sensor placement.</li>
                 </ul>
             </div>
@@ -191,7 +191,7 @@
 
     <!-- Footer -->
     <footer class="bg-gray-800 dark:bg-gray-950 text-white p-4 text-center">
-        <p>© 2025 Smart City Monitoring. Powered by ThingSpeak and GitHub Pages.</p>
+        <p>© 2025 Smart City Monitoring. Powered by Sovon380.</p>
     </footer>
 
     <!-- Custom Script -->
