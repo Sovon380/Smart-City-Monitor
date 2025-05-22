@@ -1,37 +1,51 @@
-body {
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    padding: 0;
+/* Custom styles for animations and theme enhancements */
+.animate-fade-in {
+    animation: fadeIn 0.7s ease-in;
 }
-.status-badge {
-    padding: 2px 8px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-weight: 500;
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-.normal { background-color: #22c55e; color: white; }
-.warning { background-color: #facc15; color: black; }
-.critical { background-color: #ef4444; color: white; }
-#toast {
-    transition: opacity 0.3s ease-in-out;
+
+/* Status text colors */
+.green { color: #10b981; }
+.yellow { color: #f59e0b; }
+.red { color: #ef4444; }
+
+/* Scrollbar styling for recommendations */
+#recommendations::-webkit-scrollbar {
+    width: 8px;
 }
-.animate-pulse {
-    animation: pulse 1.5s infinite;
+#recommendations::-webkit-scrollbar-track {
+    background: #f1f1f1;
 }
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
+#recommendations::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
 }
-section {
-    transition: all 0.2s ease;
+#recommendations::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
-section:hover {
+
+/* Dark mode scrollbar */
+.dark #recommendations::-webkit-scrollbar-track {
+    background: #374151;
+}
+.dark #recommendations::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+}
+.dark #recommendations::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}
+
+/* Chart canvas */
+canvas {
+    max-height: 200px;
+    width: 100%;
+}
+
+/* Hover effects for cards */
+.card-hover:hover {
     transform: translateY(-2px);
-}
-@media (max-width: 640px) {
-    h1 { font-size: 1.5rem; }
-    h2 { font-size: 1.25rem; }
-    .grid-cols-3 { grid-template-columns: 1fr; }
-    #temp-chart { height: 48vw !important; }
 }
