@@ -49,3 +49,36 @@ canvas {
 .card-hover:hover {
     transform: translateY(-2px);
 }
+
+/* Loading spinner animation */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Flash effect for updated charts */
+.flash-update {
+    animation: flashBorder 0.5s ease-out;
+}
+@keyframes flashBorder {
+    0% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* ThingSpeak-like chart styling */
+.chart-container {
+    font-family: 'Arial', sans-serif;
+}
+.chart-container .chartjs-tooltip {
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-radius: 4px;
+}
+
+/* Stale data warning */
+.stale-warning {
+    color: #ef4444;
+}

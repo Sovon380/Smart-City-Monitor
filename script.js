@@ -1,6 +1,7 @@
 const thingSpeakChannel = "2936641";
 const readApiKey = "98ZPQ930QYNNI2A9";
-const thingSpeakApiUrl = `https://api.thingspeak.com/channels/${thingSpeakChannel}/feeds.json?api_key=${readApiKey}&results=10`;
+const latestApiUrl = `https://api.thingspeak.com/channels/${thingSpeakChannel}/feeds.json?api_key=${readApiKey}&results=1`;
+const historicalApiUrl = `https://api.thingspeak.com/channels/${thingSpeakChannel}/feeds.json?api_key=${readApiKey}&results=10`;
 
 // Hardcoded worker data (fallback, cycled sequentially)
 const fallbackWorkers = [
@@ -12,32 +13,80 @@ const fallbackWorkers = [
 ];
 let currentWorkerIndex = 0;
 
-// Chart configurations
+// Realistic fallback data generator
+function generateFallbackData() {
+    const now = new Date();
+    const temp = (Math.random() * 5 + 25).toFixed(1); // 25–30°C
+    const hum = (Math.random() * 20 + 60).toFixed(1); // 60–80%
+    const gas = Math.floor(Math.random() * 1000 + 1000); // 1000–2000
+    const crowd = Math.floor(Math.random() * 70 + 30); // 30–100 cm
+    const realFeel = (parseFloat(temp) + (Math.random() * 3 + 2)).toFixed(1); // Temp + 2–5°C
+    return {
+        created_at: now.toISOString(),
+        field1: temp,
+        field2: hum,
+        field3: gas,
+        field4: crowd,
+        field8: realFeel,
+        field5: "", // Worker UID (empty to trigger fallback worker)
+        field6: "",
+        field7: ""
+    };
+}
+
+// Initialize historical fallback data
+const fallbackHistorical = Array(10).fill().map((_, i) => ({
+    ...generateFallbackData(),
+    created_at: new Date(Date.now() - (9 - i) * 15000).toISOString()
+}));
+
+// Chart configurations (ThingSpeak-like styling)
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { labels: { font: { family: 'Arial', size: 12 } } },
+        tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.8)', titleFont: { family: 'Arial' }, bodyFont: { family: 'Arial' } }
+    },
+    scales: {
+        x: {
+            type: 'time',
+            time: { unit: 'second', displayFormats: { second: 'yyyy-MM-dd HH:mm:ss' } },
+            title: { display: true, text: 'Time', font: { family: 'Arial' } },
+            grid: { color: 'rgba(0, 0, 0, 0.1)' }
+        },
+        y: {
+            title: { display: true, font: { family: 'Arial' } },
+            grid: { color: 'rgba(0, 0, 0, 0.1)' }
+        }
+    }
+};
+
 const charts = {
     temp: new Chart(document.getElementById("tempChart"), {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Temperature (°C)", data: [], borderColor: "#10b981", fill: false }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 60 } } }
+        data: { labels: [], datasets: [{ label: "Temperature (°C)", data: [], borderColor: "#1e90ff", fill: false }] },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 60, title: { ...chartOptions.scales.y.title, text: 'Temperature (°C)' } } } }
     }),
     hum: new Chart(document.getElementById("humChart"), {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Humidity (%)", data: [], borderColor: "#3b82f6", fill: false }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }
+        data: { labels: [], datasets: [{ label: "Humidity (%)", data: [], borderColor: "#1e90ff", fill: false }] },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 100, title: { ...chartOptions.scales.y.title, text: 'Humidity (%)' } } } }
     }),
     realFeel: new Chart(document.getElementById("realFeelChart"), {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Real Feel (°C)", data: [], borderColor: "#f59e0b", fill: false }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 60 } } }
+        data: { labels: [], datasets: [{ label: "Real Feel (°C)", data: [], borderColor: "#1e90ff", fill: false }] },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 60, title: { ...chartOptions.scales.y.title, text: 'Real Feel (°C)' } } } }
     }),
     gas: new Chart(document.getElementById("gasChart"), {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Gas Level", data: [], borderColor: "#ef4444", fill: false }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 4095 } } }
+        data: { labels: [], datasets: [{ label: "Gas Level", data: [], borderColor: "#1e90ff", fill: false }] },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 4095, title: { ...chartOptions.scales.y.title, text: 'Gas Level' } } } }
     }),
     crowd: new Chart(document.getElementById("crowdChart"), {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Crowd Distance (cm)", data: [], borderColor: "#8b5cf6", fill: false }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 200 } } }
+        data: { labels: [], datasets: [{ label: "Crowd Distance (cm)", data: [], borderColor: "#1e90ff", fill: false }] },
+        options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, min: 0, max: 200, title: { ...chartOptions.scales.y.title, text: 'Crowd Distance (cm)' } } } }
     })
 };
 
@@ -56,20 +105,21 @@ themeToggle.addEventListener("click", () => {
 });
 
 // Function to fetch ThingSpeak data
-async function fetchThingSpeakData() {
+async function fetchThingSpeakData(url) {
     try {
-        const response = await fetch(thingSpeakApiUrl);
+        document.getElementById("updateStatus").classList.remove("hidden");
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         if (!data.feeds || data.feeds.length === 0) throw new Error("No feeds available");
         // Cache data in localStorage
-        localStorage.setItem("thingSpeakCache", JSON.stringify(data));
+        localStorage.setItem(url.includes("results=1") ? "thingSpeakLatest" : "thingSpeakHistorical", JSON.stringify(data));
         return data;
     } catch (error) {
         console.error("Error fetching ThingSpeak data:", error);
-        // Return cached data if available
-        const cachedData = localStorage.getItem("thingSpeakCache");
-        return cachedData ? JSON.parse(cachedData) : null;
+        return null;
+    } finally {
+        document.getElementById("updateStatus").classList.add("hidden");
     }
 }
 
@@ -157,7 +207,7 @@ function updateWorkerInfo(latestFeed) {
         name: latestFeed.field6 || "",
         role: latestFeed.field7 || "",
         age: latestFeed.field6 ? parseInt(latestFeed.field6.match(/\d+/)) || 30 : 30,
-        workingLevel: " joystick" // Default if not available
+        workingLevel: "Medium" // Default if not available
     };
 
     // Fallback to next hardcoded worker if data is missing
@@ -166,18 +216,18 @@ function updateWorkerInfo(latestFeed) {
         currentWorkerIndex = (currentWorkerIndex + 1) % fallbackWorkers.length;
     }
 
-    document.getElementById("workerUID").textContent = worker.uid || "N/A";
-    document.getElementById("workerName").textContent = worker.name || "N/A";
-    document.getElementById("workerRole").textContent = worker.role || "N/A";
-    document.getElementById("workerAge").textContent = worker.age || "N/A";
-    document.getElementById("workerLevel").textContent = worker.workingLevel || "N/A";
+    document.getElementById("workerUID").textContent = worker.uid;
+    document.getElementById("workerName").textContent = worker.name;
+    document.getElementById("workerRole").textContent = worker.role;
+    document.getElementById("workerAge").textContent = worker.age;
+    document.getElementById("workerLevel").textContent = worker.workingLevel;
 
     return worker;
 }
 
 // Function to update charts
-function updateCharts(feeds) {
-    const labels = feeds.map(f => new Date(f.created_at).toLocaleTimeString());
+function updateCharts(feeds, isNewData) {
+    const labels = feeds.map(f => new Date(f.created_at));
     charts.temp.data.labels = labels;
     charts.temp.data.datasets[0].data = feeds.map(f => parseFloat(f.field1) || 0);
     charts.hum.data.labels = labels;
@@ -188,23 +238,39 @@ function updateCharts(feeds) {
     charts.gas.data.datasets[0].data = feeds.map(f => parseInt(f.field3) || 0);
     charts.crowd.data.labels = labels;
     charts.crowd.data.datasets[0].data = feeds.map(f => parseInt(f.field4) || 50);
-    Object.values(charts).forEach(chart => chart.update());
+    Object.values(charts).forEach(chart => {
+        chart.update();
+        if (isNewData) {
+            const canvas = chart.canvas;
+            canvas.classList.add("flash-update");
+            setTimeout(() => canvas.classList.remove("flash-update"), 500);
+        }
+    });
 }
 
 // Function to update dashboard
-async function updateDashboard() {
-    const data = await fetchThingSpeakData();
+async function updateDashboard(isHistorical = false) {
+    const url = isHistorical ? historicalApiUrl : latestApiUrl;
+    let data = await fetchThingSpeakData(url);
+    let isNewData = true;
+
     if (!data || !data.feeds || data.feeds.length === 0) {
-        // Use fallback worker and show error message
-        const worker = fallbackWorkers[currentWorkerIndex];
-        currentWorkerIndex = (currentWorkerIndex + 1) % fallbackWorkers.length;
-        document.getElementById("workerUID").textContent = worker.uid;
-        document.getElementById("workerName").textContent = worker.name;
-        document.getElementById("workerRole").textContent = worker.role;
-        document.getElementById("workerAge").textContent = worker.age;
-        document.getElementById("workerLevel").textContent = worker.workingLevel;
-        document.getElementById("recommendations").innerHTML = "<p class='mb-2'><strong>1.</strong> Environment data unavailable. Check sensor connection or API key.</p>";
-        return;
+        // Use realistic fallback data
+        data = { feeds: isHistorical ? fallbackHistorical : [generateFallbackData()] };
+        isNewData = false;
+        document.getElementById("lastUpdated").classList.add("stale-warning");
+        document.getElementById("lastUpdated").textContent = `Last updated: Data unavailable, showing simulated values`;
+    } else {
+        // Check if data is stale (>15 seconds old)
+        const latestTime = new Date(data.feeds[data.feeds.length - 1].created_at);
+        const now = new Date();
+        if ((now - latestTime) > 15000) {
+            document.getElementById("lastUpdated").classList.add("stale-warning");
+            document.getElementById("lastUpdated").textContent = `Last updated: ${latestTime.toLocaleString()} (stale data)`;
+        } else {
+            document.getElementById("lastUpdated").classList.remove("stale-warning");
+            document.getElementById("lastUpdated").textContent = `Last updated: ${latestTime.toLocaleString()}`;
+        }
     }
 
     const latestFeed = data.feeds[data.feeds.length - 1];
@@ -226,7 +292,7 @@ async function updateDashboard() {
                                                     statuses.gas === "Warning" ? "yellow" : "red";
     document.getElementById("crowdStatus").textContent = statuses.crowd;
     document.getElementById("crowdStatus").className = statuses.crowd === "Normal" ? "green" :
-                                                      statuses.crowd === "Warning" ? "yellow" : "red";
+                                                      statuses.crowd === "Warning" : "yellow" : "red";
 
     // Update recommendations
     document.getElementById("recommendations").innerHTML = recommendations
@@ -234,7 +300,14 @@ async function updateDashboard() {
         .join("");
 
     // Update charts
-    updateCharts(data.feeds);
+    let historicalData = data;
+    if (!isHistorical) {
+        const cachedHistorical = localStorage.getItem("thingSpeakHistorical");
+        historicalData = cachedHistorical ? JSON.parse(cachedHistorical) : { feeds: fallbackHistorical };
+    }
+    if (historicalData && historicalData.feeds) {
+        updateCharts(historicalData.feeds, isNewData || isHistorical);
+    }
 }
 
 // Debounce function to prevent overlapping updates
@@ -246,6 +319,7 @@ function debounce(func, wait) {
     };
 }
 
-// Initialize dashboard and set debounced update interval
-updateDashboard();
-setInterval(debounce(updateDashboard, 15000), 15000); // Update every 15 seconds
+// Initialize dashboard with fallback data
+updateDashboard(true);
+setInterval(debounce(() => updateDashboard(false), 5000), 5000); // Latest data every 5 seconds
+setInterval(debounce(() => updateDashboard(true), 30000), 30000); // Historical data every 30 seconds
