@@ -275,6 +275,13 @@ async function updateDashboard(isHistorical = false) {
     const worker = updateWorkerInfo(latestFeed);
     const { statuses, recommendations } = calculateStatusesAndRecommendations(latestFeed, worker);
 
+    // Update current values
+    document.getElementById("tempValue").textContent = `Current: ${parseFloat(latestFeed.field1 || 27.5).toFixed(1)}°C`;
+    document.getElementById("humValue").textContent = `Current: ${parseFloat(latestFeed.field2 || 65.0).toFixed(1)}%`;
+    document.getElementById("realFeelValue").textContent = `Current: ${parseFloat(latestFeed.field8 || 30.0).toFixed(1)}°C`;
+    document.getElementById("gasValue").textContent = `Current: ${parseInt(latestFeed.field3 || 1500)}`;
+    document.getElementById("crowdValue").textContent = `Current: ${parseInt(latestFeed.field4 || 50)} cm`;
+
     // Update status texts
     document.getElementById("tempStatus").textContent = statuses.temp;
     document.getElementById("tempStatus").className = statuses.temp === "Normal" ? "green" :
