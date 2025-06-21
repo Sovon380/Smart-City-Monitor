@@ -1,42 +1,105 @@
-# Smart City Monitoring Dashboard
+# 🌆 Smart City Monitor - IoT-based Environmental & Safety Monitoring System
 
-A professional web app for monitoring environmental conditions and worker safety in a smart city. Built with HTML, Tailwind CSS, and Chart.js, hosted on GitHub Pages, and powered by ThingSpeak (Channel 2936641) with secure Read API Key access.
+An ESP32-powered IoT system that monitors heatwave conditions, air quality, crowd density, and worker safety in real-time for smart city applications. It integrates multiple sensors, RFID tracking, local alert systems, and cloud platforms (Blynk + ThingSpeak) to deliver intelligent urban monitoring.
 
-## Features
-- **Real-Time Graphs**: ThingSpeak-style line charts for temperature, humidity, real feel, gas level, and crowd distance (last 10 readings).
-- **Worker Information**: Displays UID, name, role, age, and working level; falls back to hardcoded profiles (Sovon, Sudipta, etc.) if unavailable.
-- **Safety Recommendations**: Tailored advice based on sensor data, worker role, age, and working level, always populated.
-- **Precautions Section**: Guidelines for Older Workers, Engineers, Supervisors, Visitors, and High working level, plus system limitations.
-- **Light/Dark Theme**: Toggleable theme with user preference persistence.
-- **CSV Download**: Button to download ThingSpeak data as CSV.
-- **Realistic Fallback**: Shows realistic values (e.g., 25–30°C, 60–80% humidity) if API fails, ensuring no blank fields.
-- **Fast Updates**: Polls latest data every 5 seconds, historical data every 30 seconds, with stale data warnings.
-- **Responsive UI**: Optimized for mobile and desktop with animations, hover effects, and update indicators.
-- **Secure Data Access**: Uses ThingSpeak Read API Key `98ZPQ930QYNNI2A9`.
+## 📌 Table of Contents
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [System Architecture](#system-architecture)
+- [Hardware Components](#hardware-components)
+- [Software Technologies](#software-technologies)
+- [How It Works](#how-it-works)
+- [Installation & Setup](#installation--setup)
+- [Cloud Integration](#cloud-integration)
+- [Demo & Screenshots](#demo--screenshots)
+- [Future Enhancements](#future-enhancements)
+- [Contributors](#contributors)
+- [License](#license)
 
-## Setup
-1. Ensure ThingSpeak Channel 2936641 is updated by the ESP32 and accessible with Read API Key `98ZPQ930QYNNI2A9`.
-2. Clone this repository:
-   ```bash
-   git clone https://github.com/your-username/smart-city-monitoring.git
-   ```
-3. Host on GitHub Pages:
-   - Push files to the `main` branch.
-   - Enable GitHub Pages in **Settings** > **Pages** (branch: `main`, folder: `/`).
-4. Access at `https://your-username.github.io/smart-city-monitoring`.
+---
 
-## Files
-- `index.html`: Main dashboard with logo, menu, graphs, CSV button, timestamp, and sections.
-- `styles.css`: Animations, ThingSpeak-like chart styles, and stale data warning.
-- `script.js`: Fetches ThingSpeak data, renders charts, handles theme toggle, and ensures no blank fields.
+## 🚀 Project Overview
 
-## Deployment Notes
-- Minify CSS and JS for production using [Terser](https://terser.org) or [cssnano](https://cssnano.co).
-- Replace placeholder logo (`https://via.placeholder.com/40?text=SC`) with your own in `index.html`.
-- ESP32 must update ThingSpeak every ~5 seconds for true real-time data (requires paid plan or code tweak).
+This project aims to provide a low-cost, scalable environmental monitoring system tailored for urban settings. It monitors:
+- Temperature and humidity (heatwave conditions)
+- Gas levels (air quality)
+- Distance-based crowding
+- Worker presence via RFID
+- Local alerts (OLED + buzzer)
+- Cloud logging and dashboards
 
-## URL
-[https://your-username.github.io/smart-city-monitoring](https://your-username.github.io/smart-city-monitoring)
+The system is ideal for deployment in industrial sites, construction zones, and public areas where safety and environmental awareness are crucial.
 
-## Support
-Contact: [support@smartcity.example.com](mailto:support@smartcity.example.com)
+---
+
+## 🔧 Features
+
+- 🌡️ **Temperature & Humidity Monitoring** (DHT11)
+- 🌫️ **Gas Detection** (MQ series sensor)
+- 👥 **Crowd Detection** (Ultrasonic sensor)
+- 🆔 **RFID Worker Identification** (MFRC522)
+- 📟 **OLED Live Display & Graph**
+- 🔔 **Buzzer Alert System**
+- 💾 **SD Card Logging**
+- ☁️ **Cloud Uploads to ThingSpeak & Blynk**
+- 🔋 **Solar-Powered & Portable**
+
+---
+
+## 🧩 System Architecture
+
+The system adopts a **star topology**:
+
+- Central Node: ESP32 (controls all logic)
+- Peripherals: Sensors, RFID, OLED, SD card (via I2C & SPI)
+- Cloud: Wi-Fi connectivity to Blynk & ThingSpeak
+- Power: Solar panel + Li-ion battery with regulator
+
+---
+
+## 🛠 Hardware Components
+
+| Component           | Quantity |
+|---------------------|----------|
+| ESP32 Dev Board     | 1        |
+| DHT11 Sensor        | 1        |
+| MQ Gas Sensor       | 1        |
+| Ultrasonic Sensor   | 1        |
+| MFRC522 RFID Module | 1        |
+| RFID Cards & Tags   | 3+       |
+| I2C OLED (0.96")    | 1        |
+| Buzzer Module       | 1        |
+| SD Card Module + Card| 1       |
+| Solar Panel + Battery| 1       |
+| Jumper Wires        | many     |
+| Breadboard          | 1        |
+
+---
+
+## 💻 Software Technologies
+
+- Arduino IDE (C++ for ESP32)
+- Blynk IoT Platform
+- ThingSpeak (Cloud data visualization)
+- GitHub Pages (Static website)
+- VS Code / Overleaf (Documentation)
+
+---
+
+## 🔄 How It Works
+
+1. Sensors continuously read environmental data.
+2. RFID detects which worker is present.
+3. Data is logged to SD and visualized on OLED.
+4. Local buzzer triggers if unsafe thresholds are met.
+5. Data is simultaneously sent to Blynk and ThingSpeak.
+6. Admin can view logs via display, dashboard, or static website.
+
+---
+
+## ⚙ Installation & Setup
+
+### 1. Clone the Repo
+```bash
+git clone https://github.com/Sovon380/Smart-City-Monitor.git
+cd Smart-City-Monitor
