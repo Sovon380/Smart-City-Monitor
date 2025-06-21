@@ -128,8 +128,7 @@ ThingSpeak
 3. Configure Wi-Fi & Credentials
 Update the following in the .ino file:
 
-cpp
-Copy
+```bash
 char ssid[] = "YOUR_SSID";
 char pass[] = "YOUR_PASSWORD";
 #define BLYNK_TEMPLATE_ID "..."
@@ -137,6 +136,7 @@ char pass[] = "YOUR_PASSWORD";
 #define BLYNK_AUTH_TOKEN "..."
 unsigned long myChannelNumber = YOUR_THINGSPEAK_CHANNEL;
 const char * myWriteAPIKey = "YOUR_API_KEY";
+```
 4. Upload & Power
 Upload the code to ESP32 using Arduino IDE. Power via USB or solar panel.
 
@@ -153,8 +153,7 @@ Plots sensor values on public/private charts
 
 Stores historical data for analysis
 
-## 📸 Demo & Screenshots
-(Add OLED snapshots, Blynk dashboard images, and ThingSpeak graph links here)
+
 
 ## 🔮 Future Enhancements
 🤖 AI for heatwave prediction
@@ -168,7 +167,6 @@ Stores historical data for analysis
 ## 👨‍💻 Contributors
 Sovon Mallick – IoT System Developer, Project Lead
 
-(You can add team members or guide names if any)
 
 ## 📄 License
 This project is licensed under the MIT License. See LICENSE file for more details.
