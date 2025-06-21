@@ -102,4 +102,75 @@ The system adopts a **star topology**:
 ### 1. Clone the Repo
 ```bash
 git clone https://github.com/Sovon380/Smart-City-Monitor.git
+```
+```bash
 cd Smart-City-Monitor
+```
+### 2. Libraries Required
+Install these in Arduino IDE:
+
+- Adafruit_SSD1306
+
+- Adafruit_GFX
+
+- DHT sensor library
+
+- MFRC522
+
+- SD
+
+- WiFi
+
+- Blynk
+
+ThingSpeak
+
+3. Configure Wi-Fi & Credentials
+Update the following in the .ino file:
+
+cpp
+Copy
+char ssid[] = "YOUR_SSID";
+char pass[] = "YOUR_PASSWORD";
+#define BLYNK_TEMPLATE_ID "..."
+#define BLYNK_TEMPLATE_NAME "..."
+#define BLYNK_AUTH_TOKEN "..."
+unsigned long myChannelNumber = YOUR_THINGSPEAK_CHANNEL;
+const char * myWriteAPIKey = "YOUR_API_KEY";
+4. Upload & Power
+Upload the code to ESP32 using Arduino IDE. Power via USB or solar panel.
+
+## ☁️ Cloud Integration
+🔹 Blynk
+Real-time mobile dashboard
+
+Displays: Temp, Humidity, Gas, Distance
+
+Worker UID, Name, Role
+
+🔹 ThingSpeak
+Plots sensor values on public/private charts
+
+Stores historical data for analysis
+
+## 📸 Demo & Screenshots
+(Add OLED snapshots, Blynk dashboard images, and ThingSpeak graph links here)
+
+## 🔮 Future Enhancements
+🤖 AI for heatwave prediction
+
+📶 LoRaWAN-based long-range nodes
+
+🏢 Municipal dashboard integration
+
+📱 Native mobile app for monitoring
+
+## 👨‍💻 Contributors
+Sovon Mallick – IoT System Developer, Project Lead
+
+(You can add team members or guide names if any)
+
+## 📄 License
+This project is licensed under the MIT License. See LICENSE file for more details.
+
+
